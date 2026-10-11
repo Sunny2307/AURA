@@ -1,0 +1,272 @@
+app/test\design_system_test.dart:28:          theme: AuraTheme.dark,
+app/test\design_system_test.dart:37:      expect(text.style?.color, AuraColors.negative);
+app/test\design_system_test.dart:41:  group('AuraColors.forPoints', () {
+app/test\design_system_test.dart:43:      expect(AuraColors.forPoints(1), AuraColors.positive);
+app/test\design_system_test.dart:44:      expect(AuraColors.forPoints(-1), AuraColors.negative);
+app/test\design_system_test.dart:45:      expect(AuraColors.forPoints(0), AuraColors.neutral);
+app/test\design_system_test.dart:49:  group('AuraOrb.colorForScore', () {
+app/test\design_system_test.dart:51:      expect(AuraOrb.colorForScore(0), AuraColors.negative);
+app/test\design_system_test.dart:52:      expect(AuraOrb.colorForScore(600), AuraColors.neutral);
+app/test\design_system_test.dart:53:      expect(AuraOrb.colorForScore(1000), AuraColors.positive);
+app/test\design_system_test.dart:55:      expect(AuraOrb.colorForScore(5000), AuraColors.positive);
+app/test\design_system_test.dart:67:        final c = AuraOrb.colorForScore(s);
+app/test\design_system_test.dart:81:  group('AuraOrb', () {
+app/test\design_system_test.dart:84:        const MaterialApp(home: Scaffold(body: AuraOrb(score: 1000))),
+app/test\design_system_test.dart:98:          child: MaterialApp(home: Scaffold(body: AuraOrb(score: 1000))),
+app/test\design_system_test.dart:111:        const MaterialApp(home: Scaffold(body: AuraOrb(score: 1000))),
+app/test\design_system_test.dart:117:      expect(find.byType(AuraOrb), findsNothing);
+app/test\design_system_test.dart:121:  group('AuraTheme', () {
+app/test\design_system_test.dart:123:      final theme = AuraTheme.dark;
+app/test\design_system_test.dart:125:      expect(theme.scaffoldBackgroundColor, AuraColors.background);
+app/test\design_system_test.dart:126:      expect(theme.colorScheme.primary, AuraColors.positive);
+app/test\design_system_test.dart:127:      expect(theme.colorScheme.error, AuraColors.negative);
+app/test\design_system_test.dart:131:      expect(AuraTheme.dark.textTheme.bodyLarge?.fontFamily, 'Nunito');
+app/test\design_system_test.dart:139:      final t = AuraType.textTheme;
+app/lib\app.dart:28:      theme: AuraTheme.dark,
+app/lib\app.dart:29:      // Dark only, deliberately — see AuraTheme. `darkTheme` is set to the same
+app/lib\app.dart:31:      darkTheme: AuraTheme.dark,
+app/test\features\onboarding_flow_test.dart:35:  /// carousel becomes testable at all. `AuraOrb` breathes on an endless
+app/test\features\onboarding_flow_test.dart:41:    final app = MaterialApp(theme: AuraTheme.dark, home: child);
+app/test\features\onboarding_flow_test.dart:156:    /// that screen renders an `AuraOrb`, whose endless breath would stop the tree
+app/test\features\onboarding_flow_test.dart:185:              theme: AuraTheme.dark,
+app/test\golden\design_check_golden_test.dart:52:          theme: AuraTheme.dark,
+app/test\features\send_aura_flow_test.dart:70:      child: MaterialApp(theme: AuraTheme.dark, home: const SendAuraScreen()),
+app/test\features\friends_flow_test.dart:78:      child: MaterialApp(theme: AuraTheme.dark, home: child),
+app/test\features\safety_flow_test.dart:85:      child: MaterialApp(theme: AuraTheme.dark, home: child),
+app/lib\main.dart:25:      systemNavigationBarColor: AuraColors.background,
+app/lib\prototype\local_photo_step.dart:99:              ? AuraOrb(score: account.score, size: 160)
+app/lib\prototype\prototype_panel.dart:11:class PrototypePanel extends ConsumerStatefulWidget {
+app/lib\prototype\prototype_panel.dart:12:  const PrototypePanel({super.key, this.compact = false});
+app/lib\prototype\prototype_panel.dart:15:  ConsumerState<PrototypePanel> createState() => _PrototypePanelState();
+app/lib\prototype\prototype_panel.dart:18:class _PrototypePanelState extends ConsumerState<PrototypePanel> {
+app/lib\features\dev\design_check_screen.dart:17:/// applied and [AuraType] needs fixing.
+app/lib\features\dev\design_check_screen.dart:58:        Text(title, style: AuraType.headingMedium),
+app/lib\features\dev\design_check_screen.dart:61:          Text(note!, style: AuraType.bodySmall),
+app/lib\features\dev\design_check_screen.dart:84:              const AuraOrb(score: 1000, size: 220),
+app/lib\features\dev\design_check_screen.dart:86:              Text('1000', style: AuraType.scoreHero),
+app/lib\features\dev\design_check_screen.dart:87:              Text('aura', style: AuraType.bodySmall),
+app/lib\features\dev\design_check_screen.dart:117:        AuraOrb(score: score, size: 68),
+app/lib\features\dev\design_check_screen.dart:119:        Text('$score', style: AuraType.caption),
+app/lib\features\dev\design_check_screen.dart:137:        AuraCard(
+app/lib\features\dev\design_check_screen.dart:141:              Text('1000', style: AuraType.scoreHero),
+app/lib\features\dev\design_check_screen.dart:143:              Text('heading large', style: AuraType.headingLarge),
+app/lib\features\dev\design_check_screen.dart:144:              Text('heading medium', style: AuraType.headingMedium),
+app/lib\features\dev\design_check_screen.dart:146:              Text('body — you got +80 aura from @sam', style: AuraType.body),
+app/lib\features\dev\design_check_screen.dart:147:              Text('body strong', style: AuraType.bodyStrong),
+app/lib\features\dev\design_check_screen.dart:148:              Text('body small, muted', style: AuraType.bodySmall),
+app/lib\features\dev\design_check_screen.dart:149:              Text('2 minutes ago', style: AuraType.caption),
+app/lib\features\dev\design_check_screen.dart:155:        AuraCard(
+app/lib\features\dev\design_check_screen.dart:163:                    fontFamily: AuraType.family,
+app/lib\features\dev\design_check_screen.dart:167:                    color: AuraColors.textPrimary,
+app/lib\features\dev\design_check_screen.dart:182:    ('background', AuraColors.background),
+app/lib\features\dev\design_check_screen.dart:183:    ('surface', AuraColors.surface),
+app/lib\features\dev\design_check_screen.dart:184:    ('positive', AuraColors.positive),
+app/lib\features\dev\design_check_screen.dart:185:    ('positiveDeep', AuraColors.positiveDeep),
+app/lib\features\dev\design_check_screen.dart:186:    ('negative', AuraColors.negative),
+app/lib\features\dev\design_check_screen.dart:187:    ('gold', AuraColors.gold),
+app/lib\features\dev\design_check_screen.dart:188:    ('neutral', AuraColors.neutral),
+app/lib\features\dev\design_check_screen.dart:189:    ('textPrimary', AuraColors.textPrimary),
+app/lib\features\dev\design_check_screen.dart:190:    ('textMuted', AuraColors.textMuted),
+app/lib\features\dev\design_check_screen.dart:214:                        border: Border.all(color: AuraColors.surfaceBorder),
+app/lib\features\dev\design_check_screen.dart:218:                    Text(name, style: AuraType.caption),
+app/lib\features\dev\design_check_screen.dart:241:        AuraCard(
+app/lib\features\dev\design_check_screen.dart:268:        Expanded(child: Text(reason, style: AuraType.body)),
+app/lib\features\dev\design_check_screen.dart:269:        AuraPoints(points: points, style: AuraType.scoreSmall, showUnit: true),
+app/lib\features\dev\design_check_screen.dart:297:        AuraCard(
+app/lib\features\dev\design_check_screen.dart:299:          borderColor: AuraColors.positive.withValues(alpha: 0.35),
+app/lib\features\dev\design_check_screen.dart:303:              const AuraOrb(score: 1400, size: 44),
+app/lib\features\dev\design_check_screen.dart:309:                    Text('@sam', style: AuraType.bodyStrong),
+app/lib\features\dev\design_check_screen.dart:310:                    Text('tappable card, teal edge', style: AuraType.bodySmall),
+app/lib\features\home\presentation\home_screen.dart:36:        title: Text('aura', style: AuraType.headingMedium),
+app/lib\features\home\presentation\home_screen.dart:99:      style: AuraType.bodySmall.copyWith(color: AuraColors.textMuted),
+app/lib\features\home\presentation\home_screen.dart:117:        Center(child: AuraOrb(score: account.score, size: 200)),
+app/lib\features\home\presentation\home_screen.dart:123:          child: Text('${account.score}', style: AuraType.scoreHero),
+app/lib\features\home\presentation\home_screen.dart:129:            style: AuraType.body.copyWith(color: AuraColors.textMuted),
+app/lib\features\home\presentation\home_screen.dart:135:        if (prototypeMode) const PrototypePanel(),
+app/lib\features\home\presentation\home_screen.dart:139:          style: AuraType.bodySmall,
+app/lib\features\home\presentation\home_screen.dart:159:              style: AuraType.headingMedium,
+app/lib\features\home\presentation\home_screen.dart:165:              style: AuraType.bodySmall,
+app/lib\features\home\presentation\home_screen.dart:196:              style: AuraType.headingMedium,
+app/lib\features\home\presentation\home_screen.dart:206:              style: AuraType.bodySmall.copyWith(color: AuraColors.negative),
+app/lib\shared\widgets\aura_wordmark.dart:19:    this.color = AuraColors.textPrimary,
+app/lib\shared\widgets\aura_wordmark.dart:45:            style: AuraType.wordmark(size: size, color: color),
+app/lib\shared\widgets\aura_wordmark.dart:57:                  color: AuraColors.positive,
+app/lib\features\onboarding\presentation\splash_screen.dart:16:/// the normal [AuraOrb] for [_minimumDisplay] *is* one pulse — no special-case
+app/lib\features\onboarding\presentation\splash_screen.dart:133:            const AuraOrb(score: 1000, size: 180),
+app/lib\features\profile\presentation\photo_step.dart:43:        Text('add a photo?', style: AuraType.headingLarge),
+app/lib\features\profile\presentation\photo_step.dart:47:          style: AuraType.body.copyWith(color: AuraColors.textMuted),
+app/lib\features\profile\presentation\photo_step.dart:50:        Center(child: AuraOrb(score: score, size: 160)),
+app/lib\features\profile\presentation\photo_step.dart:52:        Center(child: Text('@$username', style: AuraType.headingMedium)),
+app/lib\features\profile\presentation\photo_step.dart:59:            color: AuraColors.surface,
+app/lib\features\profile\presentation\photo_step.dart:61:            border: Border.all(color: AuraColors.surfaceBorder),
+app/lib\features\profile\presentation\photo_step.dart:68:                color: AuraColors.textMuted,
+app/lib\features\profile\presentation\photo_step.dart:74:                  style: AuraType.bodySmall,
+app/lib\core\theme\aura_colors.dart:12:abstract final class AuraColors {
+app/lib\core\theme\aura_typography.dart:15:abstract final class AuraType {
+app/lib\core\theme\aura_typography.dart:32:    Color color = AuraColors.textPrimary,
+app/lib\core\theme\aura_typography.dart:56:    Color color = AuraColors.textPrimary,
+app/lib\core\theme\aura_typography.dart:100:    color: AuraColors.textMuted,
+app/lib\core\theme\aura_typography.dart:109:      _style(size: 12, weight: 400, color: AuraColors.textMuted);
+app/lib\shared\widgets\aura_points.dart:30:  /// Defaults to [AuraType.scoreSmall] — pass a bigger style for hero contexts.
+app/lib\shared\widgets\aura_points.dart:60:      style: (style ?? AuraType.scoreSmall).copyWith(
+app/lib\shared\widgets\aura_points.dart:61:        color: AuraColors.forPoints(points),
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:402:        title: Text('join aura', style: AuraType.headingMedium),
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:427:                    style: AuraType.body.copyWith(color: AuraColors.negative),
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:543:                    color: AuraColors.positive,
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:601:          Text('these are free:', style: AuraType.bodySmall),
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:635:        Text(title, style: AuraType.headingLarge),
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:637:        Text(body, style: AuraType.body.copyWith(color: AuraColors.textMuted)),
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:662:        Text('that is everything.', style: AuraType.headingLarge),
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:666:          style: AuraType.body.copyWith(color: AuraColors.textMuted),
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:669:        AuraCard(
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:673:              Text('@$username', style: AuraType.headingMedium),
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:699:          style: AuraType.bodySmall,
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:717:        Text(label, style: AuraType.bodySmall),
+app/lib\features\onboarding\presentation\signup_flow_screen.dart:719:        Text(value, style: AuraType.bodyStrong),
+app/lib\features\friends\presentation\profile_preview_screen.dart:119:            style: AuraType.headingMedium,
+app/lib\features\friends\presentation\profile_preview_screen.dart:125:            style: AuraType.bodySmall.copyWith(color: AuraColors.textMuted),
+app/lib\features\friends\presentation\friends_screen.dart:38:        title: Text('friends', style: AuraType.headingMedium),
+app/lib\features\friends\presentation\friends_screen.dart:256:      title: Text('someone', style: AuraType.bodyStrong),
+app/lib\features\friends\presentation\friends_screen.dart:259:        style: AuraType.caption.copyWith(color: AuraColors.textMuted),
+app/lib\features\friends\presentation\friends_screen.dart:299:        style: AuraType.label.copyWith(color: AuraColors.textMuted),
+app/lib\features\friends\presentation\friends_screen.dart:320:              style: AuraType.headingMedium,
+app/lib\features\friends\presentation\friends_screen.dart:331:              style: AuraType.bodySmall.copyWith(color: AuraColors.textMuted),
+app/lib\features\friends\presentation\friends_screen.dart:354:              style: AuraType.headingMedium,
+app/lib\features\friends\presentation\friends_screen.dart:364:              style: AuraType.bodySmall.copyWith(color: AuraColors.textMuted),
+app/lib\features\onboarding\presentation\onboarding_art.dart:4:/// `AuraOrb`, `AuraCard` and `AuraPoints` the app uses. That is deliberate:
+app/lib\features\onboarding\presentation\onboarding_art.dart:77:        AuraOrb(score: score, size: 150),
+app/lib\features\onboarding\presentation\onboarding_art.dart:90:              Text(value.round().toString(), style: AuraType.scoreLarge),
+app/lib\features\onboarding\presentation\onboarding_art.dart:92:        Text('aura', style: AuraType.bodySmall),
+app/lib\features\onboarding\presentation\onboarding_art.dart:140:    return AuraCard(
+app/lib\features\onboarding\presentation\onboarding_art.dart:141:      borderColor: AuraColors.forPoints(points).withValues(alpha: 0.3),
+app/lib\features\onboarding\presentation\onboarding_art.dart:148:                Text(handle, style: AuraType.bodyStrong),
+app/lib\features\onboarding\presentation\onboarding_art.dart:150:                Text(reason, style: AuraType.bodySmall),
+app/lib\features\onboarding\presentation\onboarding_art.dart:155:          AuraPoints(points: points, style: AuraType.scoreSmall),
+app/lib\features\onboarding\presentation\onboarding_art.dart:177:        AuraCard(
+app/lib\features\onboarding\presentation\onboarding_art.dart:189:                            ? AuraType.bodyStrong.copyWith(
+app/lib\features\onboarding\presentation\onboarding_art.dart:190:                                color: AuraColors.gold,
+app/lib\features\onboarding\presentation\onboarding_art.dart:192:                            : AuraType.bodySmall,
+app/lib\features\onboarding\presentation\onboarding_art.dart:199:                            ? AuraType.bodyStrong
+app/lib\features\onboarding\presentation\onboarding_art.dart:200:                            : AuraType.body,
+app/lib\features\onboarding\presentation\onboarding_art.dart:203:                    Text('$score', style: AuraType.bodyStrong),
+app/lib\features\onboarding\presentation\onboarding_art.dart:216:          child: AuraCard(
+app/lib\features\onboarding\presentation\onboarding_art.dart:220:                  child: Text('show me on leaderboards', style: AuraType.body),
+app/lib\features\onboarding\presentation\onboarding_art.dart:228:                    color: AuraColors.positive,
+app/lib\features\onboarding\presentation\onboarding_art.dart:271:          AuraCard(
+app/lib\features\onboarding\presentation\onboarding_art.dart:274:                AuraOrb(score: score, size: 36),
+app/lib\features\onboarding\presentation\onboarding_art.dart:276:                Expanded(child: Text(handle, style: AuraType.bodyStrong)),
+app/lib\features\onboarding\presentation\onboarding_art.dart:277:                Text('already here', style: AuraType.caption),
+app/lib\shared\widgets\aura_orb.dart:24:class AuraOrb extends StatefulWidget {
+app/lib\shared\widgets\aura_orb.dart:25:  const AuraOrb({
+app/lib\shared\widgets\aura_orb.dart:32:         'Give AuraOrb a score, or an explicit color.',
+app/lib\shared\widgets\aura_orb.dart:61:      return Color.lerp(AuraColors.negative, AuraColors.neutral, t)!;
+app/lib\shared\widgets\aura_orb.dart:64:    return Color.lerp(AuraColors.neutral, AuraColors.positive, t)!;
+app/lib\shared\widgets\aura_orb.dart:75:  State<AuraOrb> createState() => _AuraOrbState();
+app/lib\shared\widgets\aura_orb.dart:78:class _AuraOrbState extends State<AuraOrb>
+app/lib\shared\widgets\aura_orb.dart:146:    final target = widget.color ?? AuraOrb.colorForScore(score!);
+app/lib\shared\widgets\aura_orb.dart:149:        : AuraOrb._glowStrengthForScore(score);
+app/lib\shared\widgets\aura_orb.dart:174:/// render objects and can repaint without touching [_AuraOrbState].
+app/lib\shared\widgets\aura_orb.dart:231:                      Color.lerp(color, AuraColors.background, 0.55)!,
+app/lib\features\friends\presentation\friend_tile.dart:46:        style: AuraType.bodyStrong,
+app/lib\features\friends\presentation\friend_tile.dart:54:              style: AuraType.caption.copyWith(color: AuraColors.textMuted),
+app/lib\features\friends\presentation\friend_tile.dart:79:          color: AuraColors.surface,
+app/lib\features\friends\presentation\friend_tile.dart:83:          style: AuraType.bodyStrong.copyWith(color: AuraColors.textMuted),
+app/lib\features\friends\presentation\add_friend_screen.dart:50:      appBar: AppBar(title: Text('add a friend', style: AuraType.headingMedium)),
+app/lib\features\friends\presentation\add_friend_screen.dart:129:        tone: AuraColors.textMuted,
+app/lib\features\friends\presentation\add_friend_screen.dart:136:        tone: AuraColors.textMuted,
+app/lib\features\friends\presentation\add_friend_screen.dart:141:        tone: AuraColors.textMuted,
+app/lib\features\friends\presentation\add_friend_screen.dart:151:        tone: AuraColors.negative,
+app/lib\features\friends\presentation\add_friend_screen.dart:154:      FriendSearchFound(:final profile) => AuraCard(
+app/lib\features\friends\presentation\add_friend_screen.dart:191:      style: AuraType.bodySmall.copyWith(color: AuraColors.textMuted),
+app/lib\features\friends\presentation\add_friend_screen.dart:204:    return Text(text, style: AuraType.body.copyWith(color: tone));
+app/lib\core\theme\aura_theme.dart:17:/// Note there is no `cardTheme` here. Card styling lives in the `AuraCard`
+app/lib\core\theme\aura_theme.dart:21:abstract final class AuraTheme {
+app/lib\core\theme\aura_theme.dart:25:      primary: AuraColors.positive,
+app/lib\core\theme\aura_theme.dart:27:      secondary: AuraColors.gold,
+app/lib\core\theme\aura_theme.dart:29:      error: AuraColors.negative,
+app/lib\core\theme\aura_theme.dart:31:      surface: AuraColors.surface,
+app/lib\core\theme\aura_theme.dart:32:      onSurface: AuraColors.textPrimary,
+app/lib\core\theme\aura_theme.dart:39:      scaffoldBackgroundColor: AuraColors.background,
+app/lib\core\theme\aura_theme.dart:40:      canvasColor: AuraColors.background,
+app/lib\core\theme\aura_theme.dart:41:      fontFamily: AuraType.family,
+app/lib\core\theme\aura_theme.dart:42:      textTheme: AuraType.textTheme,
+app/lib\core\theme\aura_theme.dart:50:        backgroundColor: AuraColors.background,
+app/lib\core\theme\aura_theme.dart:54:        titleTextStyle: AuraType.headingMedium,
+app/lib\core\theme\aura_theme.dart:55:        iconTheme: const IconThemeData(color: AuraColors.textPrimary),
+app/lib\core\theme\aura_theme.dart:62:          backgroundColor: AuraColors.positive,
+app/lib\core\theme\aura_theme.dart:64:          disabledBackgroundColor: AuraColors.neutral,
+app/lib\core\theme\aura_theme.dart:65:          disabledForegroundColor: AuraColors.textMuted,
+app/lib\core\theme\aura_theme.dart:71:          textStyle: AuraType.label,
+app/lib\core\theme\aura_theme.dart:78:          foregroundColor: AuraColors.textPrimary,
+app/lib\core\theme\aura_theme.dart:81:          side: const BorderSide(color: AuraColors.surfaceBorder),
+app/lib\core\theme\aura_theme.dart:85:          textStyle: AuraType.label,
+app/lib\core\theme\aura_theme.dart:91:          foregroundColor: AuraColors.positive,
+app/lib\core\theme\aura_theme.dart:93:          textStyle: AuraType.label,
+app/lib\core\theme\aura_theme.dart:100:        fillColor: AuraColors.surface,
+app/lib\core\theme\aura_theme.dart:105:        hintStyle: AuraType.body.copyWith(color: AuraColors.textMuted),
+app/lib\core\theme\aura_theme.dart:108:          borderSide: BorderSide(color: AuraColors.surfaceBorder),
+app/lib\core\theme\aura_theme.dart:112:          borderSide: BorderSide(color: AuraColors.surfaceBorder),
+app/lib\core\theme\aura_theme.dart:116:          borderSide: BorderSide(color: AuraColors.positive, width: 1.5),
+app/lib\core\theme\aura_theme.dart:120:          borderSide: BorderSide(color: AuraColors.negative),
+app/lib\core\theme\aura_theme.dart:124:          borderSide: BorderSide(color: AuraColors.negative, width: 1.5),
+app/lib\core\theme\aura_theme.dart:129:        backgroundColor: AuraColors.surface,
+app/lib\core\theme\aura_theme.dart:131:        modalBackgroundColor: AuraColors.surface,
+app/lib\core\theme\aura_theme.dart:134:        dragHandleColor: AuraColors.neutral,
+app/lib\core\theme\aura_theme.dart:138:        color: AuraColors.surfaceBorder,
+app/lib\core\theme\aura_theme.dart:144:        backgroundColor: AuraColors.surface,
+app/lib\core\theme\aura_theme.dart:145:        contentTextStyle: AuraType.body,
+app/lib\core\theme\aura_theme.dart:150:      iconTheme: const IconThemeData(color: AuraColors.textPrimary, size: 22),
+app/lib\core\theme\aura_theme.dart:153:        color: AuraColors.positive,
+app/lib\core\theme\aura_theme.dart:154:        linearTrackColor: AuraColors.surface,
+app/lib\features\friends\presentation\friend_action_button.dart:175:        backgroundColor: AuraColors.surface,
+app/lib\features\friends\presentation\friend_action_button.dart:176:        title: Text(title, style: AuraType.headingMedium),
+app/lib\features\friends\presentation\friend_action_button.dart:177:        content: Text(body, style: AuraType.bodySmall),
+app/lib\features\friends\presentation\friend_action_button.dart:187:              style: TextStyle(color: AuraColors.negative),
+app/lib\features\safety\presentation\safety_menu.dart:73:        backgroundColor: AuraColors.surface,
+app/lib\features\safety\presentation\safety_menu.dart:74:        title: Text('block $handle?', style: AuraType.headingMedium),
+app/lib\features\safety\presentation\safety_menu.dart:80:          style: AuraType.bodySmall,
+app/lib\features\safety\presentation\safety_menu.dart:91:              style: TextStyle(color: AuraColors.negative),
+app/lib\features\safety\presentation\safety_menu.dart:115:      backgroundColor: AuraColors.surface,
+app/lib\features\safety\presentation\safety_menu.dart:130:                child: Text('report $handle', style: AuraType.headingMedium),
+app/lib\features\safety\presentation\safety_menu.dart:143:                  style: AuraType.caption.copyWith(color: AuraColors.textMuted),
+app/lib\features\safety\presentation\safety_menu.dart:150:                  title: Text(reason.label, style: AuraType.body),
+app/lib\features\onboarding\presentation\onboarding_screen.dart:22:/// out of the real `AuraOrb` / `AuraCard` / `AuraPoints` widgets. Drawing
+app/lib\features\onboarding\presentation\onboarding_screen.dart:141:              if (widget.showPrototype) const PrototypePanel(compact: true),
+app/lib\features\onboarding\presentation\onboarding_screen.dart:207:                      ? AuraColors.positive
+app/lib\features\onboarding\presentation\onboarding_screen.dart:208:                      : AuraColors.neutral,
+app/lib\features\onboarding\presentation\onboarding_screen.dart:242:            style: AuraType.headingLarge,
+app/lib\features\onboarding\presentation\onboarding_screen.dart:248:            style: AuraType.body.copyWith(color: AuraColors.textMuted),
+app/lib\features\settings\presentation\blocked_list_screen.dart:28:        title: Text('blocked accounts', style: AuraType.headingMedium),
+app/lib\features\settings\presentation\blocked_list_screen.dart:89:        title: Text('someone', style: AuraType.bodyStrong),
+app/lib\features\settings\presentation\blocked_list_screen.dart:92:          style: AuraType.caption.copyWith(color: AuraColors.textMuted),
+app/lib\features\settings\presentation\blocked_list_screen.dart:145:          style: AuraType.bodySmall.copyWith(color: AuraColors.textMuted),
+app/lib\features\settings\presentation\settings_screen.dart:34:      appBar: AppBar(title: Text('settings', style: AuraType.headingMedium)),
+app/lib\features\settings\presentation\settings_screen.dart:109:                  title: Text(_labelFor(option), style: AuraType.body),
+app/lib\features\settings\presentation\settings_screen.dart:112:                    style: AuraType.caption.copyWith(
+app/lib\features\settings\presentation\settings_screen.dart:113:                      color: AuraColors.textMuted,
+app/lib\features\settings\presentation\settings_screen.dart:133:          title: Text('appear on leaderboards', style: AuraType.body),
+app/lib\features\settings\presentation\settings_screen.dart:138:            style: AuraType.caption.copyWith(color: AuraColors.textMuted),
+app/lib\features\settings\presentation\settings_screen.dart:146:          title: Text('blocked accounts', style: AuraType.body),
+app/lib\features\settings\presentation\settings_screen.dart:149:            style: AuraType.caption.copyWith(color: AuraColors.textMuted),
+app/lib\features\settings\presentation\settings_screen.dart:160:            style: AuraType.body.copyWith(color: AuraColors.negative),
+app/lib\features\settings\presentation\settings_screen.dart:164:            style: AuraType.caption.copyWith(color: AuraColors.textMuted),
+app/lib\features\settings\presentation\settings_screen.dart:203:        style: AuraType.label.copyWith(color: AuraColors.textMuted),
+app/lib\features\settings\presentation\settings_screen.dart:221:          style: AuraType.body.copyWith(color: AuraColors.textMuted),
+app/lib\features\settings\presentation\delete_account_screen.dart:54:        title: Text('delete account', style: AuraType.headingMedium),
+app/lib\features\settings\presentation\delete_account_screen.dart:70:        Text('this cannot be undone.', style: AuraType.headingMedium),
+app/lib\features\settings\presentation\delete_account_screen.dart:90:          style: AuraType.bodySmall.copyWith(color: AuraColors.textMuted),
+app/lib\features\settings\presentation\delete_account_screen.dart:106:              backgroundColor: AuraColors.negative,
+app/lib\features\settings\presentation\delete_account_screen.dart:180:              color: emphasised ? AuraColors.negative : AuraColors.textMuted,
+app/lib\features\settings\presentation\delete_account_screen.dart:187:                  ? AuraType.bodySmall.copyWith(color: AuraColors.textPrimary)
+app/lib\features\settings\presentation\delete_account_screen.dart:188:                  : AuraType.bodySmall.copyWith(color: AuraColors.textMuted),
+app/lib\shared\widgets\aura_card.dart:12:class AuraCard extends StatelessWidget {
+app/lib\shared\widgets\aura_card.dart:13:  const AuraCard({
+app/lib\shared\widgets\aura_card.dart:39:        color: AuraColors.surface,
+app/lib\shared\widgets\aura_card.dart:41:        border: Border.all(color: borderColor ?? AuraColors.surfaceBorder),
+app/lib\features\send\presentation\send_aura_screen.dart:60:      appBar: AppBar(title: Text('send aura', style: AuraType.headingMedium)),
+app/lib\features\send\presentation\send_aura_screen.dart:67:                Text('1. pick a friend', style: AuraType.headingMedium),
+app/lib\features\send\presentation\send_aura_screen.dart:77:                Text('2. what happened?', style: AuraType.headingMedium),
+app/lib\features\send\presentation\send_aura_screen.dart:103:                Text('3. points', style: AuraType.headingMedium),
+app/lib\features\send\presentation\send_aura_screen.dart:106:                  style: AuraType.scoreSmall.copyWith(color: AuraColors.forPoints(_points)),
+app/lib\features\send\presentation\send_aura_screen.dart:119:                Text('4. who sees it?', style: AuraType.headingMedium),
+app/lib\features\send\presentation\send_aura_screen.dart:130:                  Text(_error!, style: AuraType.bodySmall.copyWith(color: AuraColors.negative)),

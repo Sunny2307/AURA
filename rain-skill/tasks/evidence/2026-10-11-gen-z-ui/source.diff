@@ -1,0 +1,2096 @@
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/app.dart b/app/lib/app.dart
+index c8dec5d..1fde98b 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/app.dart
++++ b/app/lib/app.dart
+@@ -1,8 +1,7 @@
+ import 'package:flutter/material.dart';
+ import 'package:go_router/go_router.dart';
+-import 'package:flutter_riverpod/flutter_riverpod.dart';
+ 
+-import 'prototype/prototype_runtime.dart';
++import 'core/theme/aura_colors.dart';
+ 
+ import 'core/router/app_router.dart';
+ import 'core/theme/aura_theme.dart';
+@@ -19,6 +18,12 @@ class _AuraAppState extends State<AuraApp> {
+   // Built once and held. Rebuilding a GoRouter loses navigation history.
+   late final GoRouter _router = AppRouter.build();
+ 
++  @override
++  void dispose() {
++    _router.dispose();
++    super.dispose();
++  }
++
+   @override
+   Widget build(BuildContext context) {
+     return MaterialApp.router(
+@@ -31,26 +36,14 @@ class _AuraAppState extends State<AuraApp> {
+       darkTheme: AuraTheme.dark,
+       themeMode: ThemeMode.dark,
+       builder: (context, child) {
+-        // Aura's numbers are large by design; letting the OS text scale run to
+-        // 2x breaks the score layout. Clamped rather than ignored, because
+-        // ignoring it entirely locks out anyone who needs bigger text.
+-        final media = MediaQuery.of(context);
+-        return MediaQuery(
+-          data: media.copyWith(
+-            textScaler: media.textScaler.clamp(
+-              minScaleFactor: 0.9,
+-              maxScaleFactor: 1.3,
++        return ColoredBox(
++          color: AuraColors.background,
++          child: Center(
++            child: ConstrainedBox(
++              constraints: const BoxConstraints(maxWidth: 640),
++              child: child ?? const SizedBox.shrink(),
+             ),
+           ),
+-          child: Consumer(
+-            builder: (context, ref, _) => ref.watch(prototypeEnabledProvider)
+-                ? Banner(
+-                    message: 'LOCAL DEMO',
+-                    location: BannerLocation.topEnd,
+-                    child: child ?? const SizedBox.shrink(),
+-                  )
+-                : child ?? const SizedBox.shrink(),
+-          ),
+         );
+       },
+     );
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/core/router/app_router.dart b/app/lib/core/router/app_router.dart
+index 8899554..0fbb5f6 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/core/router/app_router.dart
++++ b/app/lib/core/router/app_router.dart
+@@ -22,6 +22,7 @@ import '../../features/send/presentation/send_aura_screen.dart';
+ import '../../features/profile/presentation/photo_step.dart';
+ import '../../prototype/local_photo_step.dart';
+ import '../../prototype/prototype_runtime.dart';
++import '../../shared/widgets/aura_identity.dart';
+ 
+ /// Re-exported so every `import 'core/router/app_router.dart'` in the app keeps
+ /// resolving [AuraRoutes] unchanged after the split.
+@@ -102,7 +103,10 @@ final class AppRouter {
+           builder: (context, ref, _) {
+             final account = ref.watch(currentUserProvider).value;
+             return Scaffold(
+-              appBar: AppBar(title: const Text('profile photo')),
++              appBar: AppBar(
++                leading: const AuraBackButton(),
++                title: const Text('profile photo'),
++              ),
+               body: SafeArea(
+                 child: account == null
+                     ? const Center(child: CircularProgressIndicator())
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/core/theme/aura_colors.dart b/app/lib/core/theme/aura_colors.dart
+index b073b15..d5b617d 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/core/theme/aura_colors.dart
++++ b/app/lib/core/theme/aura_colors.dart
+@@ -1,41 +1,35 @@
+ import 'package:flutter/material.dart';
+ 
+-/// Aura's colour palette, taken verbatim from the product spec section 6.2.
+-///
+-/// Every value here has been checked against WCAG contrast ratios by
+-/// `tool/check_contrast.js`. Worst case in the palette is 6.78:1 (coral on
+-/// surface) and everything else clears 7:1 (AAA). Re-run that script if you
+-/// change any value.
+-///
+-/// Deliberately only two real hues — teal and coral — plus gold used sparingly
+-/// so it keeps its meaning. Do not add a third accent without a reason.
++/// The social-collectible palette: warm ink, mint, and readable paper-white.
++/// Text contrast on all three surfaces is checked by design_system_test.dart.
+ abstract final class AuraColors {
+   /// Near-black app background. Not pure #000000 on purpose: true black causes
+   /// visible smearing while scrolling on OLED panels.
+-  static const background = Color(0xFF0A0A0A);
++  static const background = Color(0xFF0C100F);
+ 
+   /// Raised surfaces — cards, sheets, list rows.
+-  static const surface = Color(0xFF141414);
++  static const surface = Color(0xFF19201D);
++  static const surfaceRaised = Color(0xFF242E28);
+ 
+-  /// Hairline border on surfaces, giving the glassmorphic edge the spec asks
+-  /// for. Spec says 6–8% white; 7% is the middle.
+-  static const surfaceBorder = Color(0x12FFFFFF);
++  /// Quiet decorative borders; interactive outlines use [controlBorder].
++  static const surfaceBorder = Color(0xFF39463D);
++  static const controlBorder = Color(0xFF82978A);
+ 
+-  /// Positive aura. The bright end of the teal-emerald gradient.
+-  static const positive = Color(0xFF14B88A);
++  /// Positive aura and the primary action colour.
++  static const positive = Color(0xFFB5F5CE);
+ 
+   /// The deep end of that gradient, for fills and button backgrounds.
+-  static const positiveDeep = Color(0xFF053D2C);
++  static const positiveDeep = Color(0xFF285942);
+ 
+   /// Negative aura. Used *only* for negative point values and error states —
+   /// never decoratively, or it stops reading as a warning.
+   static const negative = Color(0xFFFB7360);
+ 
+   /// Premium / streaks / top-3 leaderboard. Used very sparingly by design.
+-  static const gold = Color(0xFFD4AF37);
++  static const gold = Color(0xFFEBD89C);
+ 
+-  static const textPrimary = Color(0xFFF4F4F5);
+-  static const textMuted = Color(0xFFA1A1AA);
++  static const textPrimary = Color(0xFFF6F5EF);
++  static const textMuted = Color(0xFFADB9B0);
+ 
+   /// Neutral used for a zero point value, and as the low end of the orb's
+   /// colour range when someone's score is poor.
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/core/theme/aura_theme.dart b/app/lib/core/theme/aura_theme.dart
+index dade0ae..c2b2252 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/core/theme/aura_theme.dart
++++ b/app/lib/core/theme/aura_theme.dart
+@@ -41,10 +41,9 @@ abstract final class AuraTheme {
+       fontFamily: AuraType.family,
+       textTheme: AuraType.textTheme,
+ 
+-      // Ripples read as muddy grey splashes on near-black. A scale-down press
+-      // (spec 6.5) is the intended feedback instead.
+-      splashFactory: NoSplash.splashFactory,
+-      highlightColor: Colors.transparent,
++      // Visible touch feedback also preserves keyboard focus on Material controls.
++      splashFactory: InkRipple.splashFactory,
++      highlightColor: AuraColors.positive.withValues(alpha: 0.06),
+ 
+       appBarTheme: AppBarTheme(
+         backgroundColor: AuraColors.background,
+@@ -63,11 +62,9 @@ abstract final class AuraTheme {
+           foregroundColor: scheme.onPrimary,
+           disabledBackgroundColor: AuraColors.neutral,
+           disabledForegroundColor: AuraColors.textMuted,
+-          minimumSize: const Size(0, AuraTouch.minTarget),
++          minimumSize: const Size(0, 56),
+           padding: const EdgeInsets.symmetric(horizontal: AuraSpacing.xl),
+-          shape: const RoundedRectangleBorder(
+-            borderRadius: AuraRadius.pillAll,
+-          ),
++          shape: const RoundedRectangleBorder(borderRadius: AuraRadius.pillAll),
+           textStyle: AuraType.label,
+           animationDuration: AuraMotion.press,
+         ),
+@@ -78,10 +75,8 @@ abstract final class AuraTheme {
+           foregroundColor: AuraColors.textPrimary,
+           minimumSize: const Size(0, AuraTouch.minTarget),
+           padding: const EdgeInsets.symmetric(horizontal: AuraSpacing.xl),
+-          side: const BorderSide(color: AuraColors.surfaceBorder),
+-          shape: const RoundedRectangleBorder(
+-            borderRadius: AuraRadius.pillAll,
+-          ),
++          side: const BorderSide(color: AuraColors.controlBorder),
++          shape: const RoundedRectangleBorder(borderRadius: AuraRadius.pillAll),
+           textStyle: AuraType.label,
+         ),
+       ),
+@@ -105,11 +100,11 @@ abstract final class AuraTheme {
+         hintStyle: AuraType.body.copyWith(color: AuraColors.textMuted),
+         border: const OutlineInputBorder(
+           borderRadius: AuraRadius.inputAll,
+-          borderSide: BorderSide(color: AuraColors.surfaceBorder),
++          borderSide: BorderSide(color: AuraColors.controlBorder),
+         ),
+         enabledBorder: const OutlineInputBorder(
+           borderRadius: AuraRadius.inputAll,
+-          borderSide: BorderSide(color: AuraColors.surfaceBorder),
++          borderSide: BorderSide(color: AuraColors.controlBorder),
+         ),
+         focusedBorder: const OutlineInputBorder(
+           borderRadius: AuraRadius.inputAll,
+@@ -148,26 +143,36 @@ abstract final class AuraTheme {
+       ),
+ 
+       iconTheme: const IconThemeData(color: AuraColors.textPrimary, size: 22),
++      listTileTheme: const ListTileThemeData(
++        iconColor: AuraColors.textMuted,
++        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
++      ),
++      chipTheme: ChipThemeData(
++        backgroundColor: AuraColors.surface,
++        selectedColor: AuraColors.positive,
++        labelStyle: AuraType.bodyStrong,
++        secondaryLabelStyle: AuraType.bodyStrong.copyWith(
++          color: scheme.onPrimary,
++        ),
++        side: const BorderSide(color: AuraColors.controlBorder),
++        shape: const RoundedRectangleBorder(borderRadius: AuraRadius.inputAll),
++        padding: const EdgeInsets.all(8),
++      ),
++      floatingActionButtonTheme: const FloatingActionButtonThemeData(
++        backgroundColor: AuraColors.positive,
++        foregroundColor: Color(0xFF00150E),
++        elevation: 0,
++      ),
+ 
+       progressIndicatorTheme: const ProgressIndicatorThemeData(
+         color: AuraColors.positive,
+         linearTrackColor: AuraColors.surface,
+       ),
+ 
+-      // Spec 6.5: page transitions slide, not fade. Material's own builders
+-      // zoom or fade, so we use the Cupertino slide on *both* platforms for a
+-      // consistent feel — Aura's screenshots get shared side by side and a
+-      // different push animation per phone reads as two different apps.
+-      //
+-      // Trade-off, accepted knowingly: on Android 14+ this gives up the system
+-      // predictive-back preview (that needs
+-      // `PredictiveBackPageTransitionsBuilder`). The back gesture itself still
+-      // works and still pops the route — only the peek animation is lost. Swap
+-      // the android entry below if that turns out to matter more than
+-      // consistency.
++      // Keep each platform's back gesture and transition behavior.
+       pageTransitionsTheme: const PageTransitionsTheme(
+         builders: {
+-          TargetPlatform.android: CupertinoPageTransitionsBuilder(),
++          TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
+           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+         },
+       ),
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/core/theme/aura_typography.dart b/app/lib/core/theme/aura_typography.dart
+index 82905b5..71e25e4 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/core/theme/aura_typography.dart
++++ b/app/lib/core/theme/aura_typography.dart
+@@ -66,7 +66,7 @@ abstract final class AuraType {
+ 
+   /// The big number on the home screen.
+   static TextStyle get scoreHero =>
+-      _style(size: 60, weight: 800, letterSpacing: -2, height: 1.0);
++      _style(size: 76, weight: 900, letterSpacing: -4, height: 1.0);
+ 
+   /// Score on a profile or an exported card.
+   static TextStyle get scoreLarge =>
+@@ -80,25 +80,20 @@ abstract final class AuraType {
+   // Spec: letter spacing slightly tight on headers for a modern feel.
+ 
+   static TextStyle get headingLarge =>
+-      _style(size: 28, weight: 700, letterSpacing: -0.6, height: 1.15);
++      _style(size: 34, weight: 900, letterSpacing: -1.2, height: 1.08);
+ 
+   static TextStyle get headingMedium =>
+-      _style(size: 20, weight: 700, letterSpacing: -0.3, height: 1.2);
++      _style(size: 22, weight: 800, letterSpacing: -0.5, height: 1.2);
+ 
+   // ---- Body ---------------------------------------------------------------
+   // Spec: regular weight, 14-16px, normal letter spacing for readability.
+ 
+-  static TextStyle get body => _style(size: 15, weight: 400, height: 1.4);
++  static TextStyle get body => _style(size: 16, weight: 500, height: 1.45);
+ 
+-  static TextStyle get bodyStrong =>
+-      _style(size: 15, weight: 600, height: 1.4);
++  static TextStyle get bodyStrong => _style(size: 15, weight: 600, height: 1.4);
+ 
+-  static TextStyle get bodySmall => _style(
+-    size: 13,
+-    weight: 400,
+-    height: 1.35,
+-    color: AuraColors.textMuted,
+-  );
++  static TextStyle get bodySmall =>
++      _style(size: 13, weight: 400, height: 1.35, color: AuraColors.textMuted);
+ 
+   /// Buttons, chips, tab labels.
+   static TextStyle get label =>
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/friends/presentation/add_friend_screen.dart b/app/lib/features/friends/presentation/add_friend_screen.dart
+index c76ecf1..517021a 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/friends/presentation/add_friend_screen.dart
++++ b/app/lib/features/friends/presentation/add_friend_screen.dart
+@@ -9,6 +9,7 @@ import '../../../core/theme/aura_spacing.dart';
+ import '../../../core/theme/aura_typography.dart';
+ import '../../../core/validation/username_rules.dart';
+ import '../../../shared/widgets/aura_card.dart';
++import '../../../shared/widgets/aura_identity.dart';
+ import '../../auth/data/user_repository.dart';
+ import '../application/friend_search_controller.dart';
+ import 'friend_action_button.dart';
+@@ -47,13 +48,20 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
+     final state = ref.watch(friendSearchControllerProvider);
+ 
+     return Scaffold(
+-      appBar: AppBar(title: Text('add a friend', style: AuraType.headingMedium)),
++      appBar: AppBar(
++        leading: const AuraBackButton(),
++        title: Text('add a friend', style: AuraType.headingMedium),
++      ),
+       body: SafeArea(
+         child: Padding(
+           padding: const EdgeInsets.all(AuraSpacing.screenPadding),
+-          child: Column(
+-            crossAxisAlignment: CrossAxisAlignment.stretch,
++          child: ListView(
+             children: [
++              const AuraIntro(
++                label: 'grow your circle',
++                title: 'find your people.',
++                body: 'One handle away from a new connection.',
++              ),
+               TextField(
+                 controller: _controller,
+                 focusNode: _focus,
+@@ -72,6 +80,7 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
+                 decoration: const InputDecoration(
+                   prefixText: '@',
+                   hintText: 'their handle',
++                  labelText: 'friend’s username',
+                 ),
+                 onChanged: (value) {
+                   if (value.isEmpty) {
+@@ -93,7 +102,7 @@ class _AddFriendScreenState extends ConsumerState<AddFriendScreen> {
+                 ),
+               ),
+               const SizedBox(height: AuraSpacing.xl),
+-              Expanded(child: _Result(state: state)),
++              _Result(state: state),
+             ],
+           ),
+         ),
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/friends/presentation/friend_tile.dart b/app/lib/features/friends/presentation/friend_tile.dart
+index a1ab8b3..035a838 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/friends/presentation/friend_tile.dart
++++ b/app/lib/features/friends/presentation/friend_tile.dart
+@@ -29,31 +29,55 @@ class FriendTile extends StatelessWidget {
+ 
+   @override
+   Widget build(BuildContext context) {
+-    return ListTile(
+-      onTap: onTap,
+-      // Keeps every row at or above the larger of the two platform minimums,
+-      // so a thumb never has to aim.
+-      minVerticalPadding: AuraSpacing.md,
+-      contentPadding: const EdgeInsets.symmetric(
+-        horizontal: AuraSpacing.sm,
+-        vertical: AuraSpacing.xs,
+-      ),
+-      leading: _Avatar(profile: profile),
+-      // Truncates rather than wraps. A row with trailing controls can get
+-      // tight, and a two-line handle would push the whole list out of rhythm.
+-      title: Text(
+-        profile.handle,
+-        style: AuraType.bodyStrong,
+-        maxLines: 1,
+-        overflow: TextOverflow.ellipsis,
+-      ),
+-      subtitle: subtitle == null
+-          ? null
+-          : Text(
+-              subtitle!,
+-              style: AuraType.caption.copyWith(color: AuraColors.textMuted),
++    final largeText = MediaQuery.textScalerOf(context).scale(16) > 22;
++    return Padding(
++      padding: const EdgeInsets.only(bottom: 10),
++      child: Material(
++        color: AuraColors.surface,
++        shape: const RoundedRectangleBorder(
++          borderRadius: AuraRadius.cardAll,
++          side: BorderSide(color: AuraColors.surfaceBorder),
++        ),
++        clipBehavior: Clip.antiAlias,
++        child: Column(
++          mainAxisSize: MainAxisSize.min,
++          children: [
++            ListTile(
++              onTap: onTap,
++              // Keeps every row at or above the larger of the two platform minimums,
++              // so a thumb never has to aim.
++              minVerticalPadding: AuraSpacing.md,
++              contentPadding: const EdgeInsets.symmetric(
++                horizontal: AuraSpacing.sm,
++                vertical: AuraSpacing.xs,
++              ),
++              leading: _Avatar(profile: profile),
++              // Truncates rather than wraps. A row with trailing controls can get
++              // tight, and a two-line handle would push the whole list out of rhythm.
++              title: Text(
++                profile.handle,
++                style: AuraType.bodyStrong,
++                maxLines: 1,
++                overflow: TextOverflow.ellipsis,
++              ),
++              subtitle: subtitle == null
++                  ? null
++                  : Text(
++                      subtitle!,
++                      style: AuraType.caption.copyWith(
++                        color: AuraColors.textMuted,
++                      ),
++                    ),
++              trailing: largeText ? null : trailing,
+             ),
+-      trailing: trailing,
++            if (largeText && trailing != null)
++              Padding(
++                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
++                child: Align(alignment: Alignment.centerRight, child: trailing),
++              ),
++          ],
++        ),
++      ),
+     );
+   }
+ }
+@@ -74,13 +98,14 @@ class _Avatar extends StatelessWidget {
+         width: size,
+         height: size,
+         alignment: Alignment.center,
+-        decoration: const BoxDecoration(
++        decoration: BoxDecoration(
+           shape: BoxShape.circle,
+-          color: AuraColors.surface,
++          color: AuraColors.positive.withValues(alpha: 0.12),
++          border: Border.all(color: AuraColors.positive.withValues(alpha: 0.3)),
+         ),
+         child: Text(
+           profile.username.isEmpty ? '?' : profile.username[0].toUpperCase(),
+-          style: AuraType.bodyStrong.copyWith(color: AuraColors.textMuted),
++          style: AuraType.headingMedium.copyWith(color: AuraColors.positive),
+         ),
+       );
+     }
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/friends/presentation/friends_screen.dart b/app/lib/features/friends/presentation/friends_screen.dart
+index 45f2f8c..0da7471 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/friends/presentation/friends_screen.dart
++++ b/app/lib/features/friends/presentation/friends_screen.dart
+@@ -11,6 +11,7 @@ import '../../../core/router/app_router.dart';
+ import '../../../core/theme/aura_colors.dart';
+ import '../../../core/theme/aura_spacing.dart';
+ import '../../../core/theme/aura_typography.dart';
++import '../../../shared/widgets/aura_identity.dart';
+ import '../../auth/application/auth_providers.dart';
+ import '../application/friends_providers.dart';
+ import '../../safety/presentation/safety_menu.dart';
+@@ -34,6 +35,7 @@ class FriendsScreen extends ConsumerWidget {
+     final myUid = ref.watch(authStateProvider).value?.uid;
+ 
+     return Scaffold(
++      bottomNavigationBar: const AuraNavigation(selected: 1),
+       appBar: AppBar(
+         title: Text('friends', style: AuraType.headingMedium),
+         actions: [
+@@ -77,9 +79,8 @@ class FriendsScreen extends ConsumerWidget {
+       ClipboardData(text: 'add me on aura: ${me.handle}\n$link'),
+     );
+     if (!context.mounted) return;
+-    ScaffoldMessenger.of(
+-      context,
+-    ).showSnackBar(const SnackBar(content: Text('invite copied.')));
++    ScaffoldMessenger.of(context)
++        .showSnackBar(const SnackBar(content: Text('invite copied.')));
+   }
+ }
+ 
+@@ -111,10 +112,15 @@ class _Lists extends StatelessWidget {
+ 
+     return ListView(
+       padding: const EdgeInsets.symmetric(
+-        horizontal: AuraSpacing.sm,
++        horizontal: AuraSpacing.screenPadding,
+         vertical: AuraSpacing.md,
+       ),
+       children: [
++        const AuraIntro(
++          label: 'better together',
++          title: 'your people.\nyour energy.',
++          body: 'Keep your circle close. New connections start here.',
++        ),
+         if (incoming.isNotEmpty) ...[
+           _SectionHeading('waiting on you (${incoming.length})'),
+           for (final friendship in incoming)
+@@ -150,7 +156,6 @@ class _Lists extends StatelessWidget {
+       ],
+     );
+   }
+-
+ }
+ 
+ /// One person, resolved from their uid to a public profile.
+@@ -202,11 +207,7 @@ class _Row extends ConsumerWidget {
+         trailing: Row(
+           mainAxisSize: MainAxisSize.min,
+           children: [
+-            FriendActionButton(
+-              otherUid: uid,
+-              handle: p.handle,
+-              compact: true,
+-            ),
++            FriendActionButton(otherUid: uid, handle: p.handle, compact: true),
+             SafetyMenu(
+               otherUid: uid,
+               handle: p.handle,
+@@ -338,11 +339,11 @@ class _Empty extends StatelessWidget {
+   }
+ }
+ 
+-class _Failed extends StatelessWidget {
++class _Failed extends ConsumerWidget {
+   const _Failed();
+ 
+   @override
+-  Widget build(BuildContext context) {
++  Widget build(BuildContext context, WidgetRef ref) {
+     return Center(
+       child: Padding(
+         padding: const EdgeInsets.all(AuraSpacing.screenPadding),
+@@ -364,6 +365,11 @@ class _Failed extends StatelessWidget {
+               style: AuraType.bodySmall.copyWith(color: AuraColors.textMuted),
+               textAlign: TextAlign.center,
+             ),
++            const SizedBox(height: 24),
++            FilledButton(
++              onPressed: () => ref.invalidate(friendshipsProvider),
++              child: const Text('try again'),
++            ),
+           ],
+         ),
+       ),
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/friends/presentation/profile_preview_screen.dart b/app/lib/features/friends/presentation/profile_preview_screen.dart
+index ba31dc2..95c1e35 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/friends/presentation/profile_preview_screen.dart
++++ b/app/lib/features/friends/presentation/profile_preview_screen.dart
+@@ -5,6 +5,8 @@ import '../../../core/models/public_profile.dart';
+ import '../../../core/theme/aura_colors.dart';
+ import '../../../core/theme/aura_spacing.dart';
+ import '../../../core/theme/aura_typography.dart';
++import '../../../shared/widgets/aura_card.dart';
++import '../../../shared/widgets/aura_identity.dart';
+ import '../../../core/validation/username_rules.dart';
+ import '../../auth/application/auth_providers.dart';
+ import '../application/friends_providers.dart';
+@@ -46,7 +48,10 @@ class ProfilePreviewScreen extends ConsumerWidget {
+       // would let a crafted link put chosen glyphs — right-to-left overrides,
+       // zero-width characters — inside the app's own chrome. `UsernameRules`
+       // only admits `[a-z0-9_]`.
+-      appBar: AppBar(title: Text('@${_safeHandle(username)}')),
++      appBar: AppBar(
++        leading: const AuraBackButton(),
++        title: Text('@${_safeHandle(username)}'),
++      ),
+       body: SafeArea(
+         child: Padding(
+           padding: const EdgeInsets.all(AuraSpacing.screenPadding),
+@@ -73,22 +78,38 @@ class ProfilePreviewScreen extends ConsumerWidget {
+                 body: 'send it to someone else to be added.',
+               ),
+ 
+-            AsyncData(value: final PublicProfile p) => Column(
+-              crossAxisAlignment: CrossAxisAlignment.stretch,
++            AsyncData(value: final PublicProfile p) => ListView(
+               children: [
+-                FriendTile(
+-                  profile: p,
+-                  // Available before you are friends, which is the point: this
+-                  // screen is reachable from an invite link sent by a stranger.
+-                  trailing: SafetyMenu(otherUid: p.uid, handle: p.handle),
++                const AuraIntro(
++                  label: 'a new connection',
++                  title: 'meet your people.',
++                  body: 'Good energy starts with a hello.',
++                ),
++                AuraCard(
++                  large: true,
++                  child: Column(
++                    children: [
++                      const AuraEyebrow('aura identity'),
++                      const SizedBox(height: 24),
++                      const Icon(
++                        Icons.fingerprint_rounded,
++                        size: 80,
++                        color: AuraColors.positive,
++                      ),
++                      const SizedBox(height: 24),
++                      FriendTile(
++                        profile: p,
++                        // Available before you are friends, which is the point: this
++                        // screen is reachable from an invite link sent by a stranger.
++                        trailing: SafetyMenu(otherUid: p.uid, handle: p.handle),
++                      ),
++                    ],
++                  ),
+                 ),
+                 const SizedBox(height: AuraSpacing.xl),
+                 Align(
+                   alignment: Alignment.centerLeft,
+-                  child: FriendActionButton(
+-                    otherUid: p.uid,
+-                    handle: p.handle,
+-                  ),
++                  child: FriendActionButton(otherUid: p.uid, handle: p.handle),
+                 ),
+               ],
+             ),
+@@ -128,9 +149,7 @@ class _Centred extends StatelessWidget {
+           if (onRetry != null) ...[
+             const SizedBox(height: AuraSpacing.xl),
+             ConstrainedBox(
+-              constraints: const BoxConstraints(
+-                minHeight: AuraTouch.minTarget,
+-              ),
++              constraints: const BoxConstraints(minHeight: AuraTouch.minTarget),
+               child: FilledButton(
+                 onPressed: onRetry,
+                 child: const Text('try again'),
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/home/presentation/home_screen.dart b/app/lib/features/home/presentation/home_screen.dart
+index e368c20..412ec58 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/home/presentation/home_screen.dart
++++ b/app/lib/features/home/presentation/home_screen.dart
+@@ -8,22 +8,16 @@ import '../../../core/theme/aura_spacing.dart';
+ import '../../../core/theme/aura_typography.dart';
+ import '../../../features/auth/application/auth_providers.dart';
+ import '../../../features/friends/application/friends_providers.dart';
+-import '../../../shared/widgets/aura_orb.dart';
++import '../../../shared/widgets/aura_identity.dart';
++import '../../../shared/widgets/aura_card.dart';
+ import '../../../prototype/prototype_panel.dart';
+ import '../../../prototype/prototype_runtime.dart';
+ import '../../../shared/widgets/profile_photo.dart';
+ 
+ /// The signed-in account, read live from the selected repository.
+ ///
+-/// **This is the slice-1 version, not the §5.4 home screen.** Its job is to prove
+-/// the round trip — an account exists, the document is real, the score is 1000 —
+-/// and to be the thing you can point at on a physical phone and say "that came
+-/// back from the cloud". The animated score, quick-stats row and feed arrive in
+-/// slices 3–5.
+-///
+-/// It reads from [currentUserProvider], a live Firestore stream rather than a
+-/// value passed in from signup. When the Node API changes the score, this
+-/// screen updates without anyone wiring anything up.
++/// The identity card reads the selected repository's actual score. Primary
++/// actions remain visible while content scrolls; demo tools are secondary.
+ class HomeScreen extends ConsumerWidget {
+   const HomeScreen({super.key});
+ 
+@@ -35,16 +29,11 @@ class HomeScreen extends ConsumerWidget {
+       appBar: AppBar(
+         title: Text('aura', style: AuraType.headingMedium),
+         actions: [
+-          IconButton(
+-            tooltip: 'friends',
+-            onPressed: () => AppRouter.pushTo(context, AuraRoutes.friends),
+-            icon: const Icon(Icons.people_outline),
+-          ),
+-          IconButton(
+-            tooltip: 'settings',
+-            onPressed: () => AppRouter.pushTo(context, AuraRoutes.settings),
+-            icon: const Icon(Icons.settings_outlined),
+-          ),
++          if (prototypeMode)
++            Padding(
++              padding: const EdgeInsets.only(right: 8),
++              child: Center(child: Text('local demo', style: AuraType.caption)),
++            ),
+           IconButton(
+             tooltip: 'sign out',
+             onPressed: () => _signOut(context, ref),
+@@ -52,10 +41,24 @@ class HomeScreen extends ConsumerWidget {
+           ),
+         ],
+       ),
+-      floatingActionButton: FloatingActionButton.extended(
+-        onPressed: () => AppRouter.pushTo(context, AuraRoutes.sendAura),
+-        icon: const Icon(Icons.auto_awesome),
+-        label: const Text('send aura'),
++      bottomNavigationBar: Column(
++        mainAxisSize: MainAxisSize.min,
++        children: [
++          if (user.value != null)
++            Padding(
++              padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
++              child: SizedBox(
++                width: double.infinity,
++                child: FilledButton.icon(
++                  onPressed: () =>
++                      AppRouter.pushTo(context, AuraRoutes.sendAura),
++                  icon: const Icon(Icons.auto_awesome_rounded),
++                  label: const Text('send aura'),
++                ),
++              ),
++            ),
++          const AuraNavigation(selected: 0),
++        ],
+       ),
+       body: SafeArea(
+         child: switch (user) {
+@@ -66,7 +69,7 @@ class HomeScreen extends ConsumerWidget {
+           // creating the auth account and writing the user — routed rather than
+           // rendered, because there is genuinely nothing to show.
+           AsyncData(value: null) => const _NeedsProfile(),
+-          AsyncError(:final error) => _Failed(error: error),
++          AsyncError() => const _Failed(),
+           _ => const Center(child: CircularProgressIndicator()),
+         },
+       ),
+@@ -111,33 +114,103 @@ class _Account extends StatelessWidget {
+     return ListView(
+       padding: const EdgeInsets.all(AuraSpacing.screenPadding),
+       children: [
+-        const SizedBox(height: AuraSpacing.xl),
+-        if (account.photoUrl != null)
+-          Center(child: ProfilePhoto(url: account.photoUrl!, size: 80)),
+-        Center(child: AuraOrb(score: account.score, size: 200)),
+-        const SizedBox(height: AuraSpacing.xl),
+-        Center(
+-          // Not animated yet. Spec §6.5 requires a count-up rather than a hard
+-          // cut, and that belongs with the first real score *change* in slice 3 —
+-          // counting up from nothing on every cold start would be theatre.
+-          child: Text('${account.score}', style: AuraType.scoreHero),
+-        ),
+-        const SizedBox(height: AuraSpacing.sm),
+-        Center(
+-          child: Text(
+-            account.handle,
+-            style: AuraType.body.copyWith(color: AuraColors.textMuted),
++        const AuraEyebrow('your reputation, remixed'),
++        const SizedBox(height: 8),
++        Text('a little energy.\na lot of you.', style: AuraType.headingLarge),
++        const SizedBox(height: 24),
++        AuraCard(
++          large: true,
++          padding: const EdgeInsets.all(24),
++          child: Column(
++            children: [
++              Row(
++                children: [
++                  const Expanded(child: AuraEyebrow('aura identity')),
++                  if (account.photoUrl != null)
++                    ProfilePhoto(url: account.photoUrl!, size: 40)
++                  else
++                    const Icon(
++                      Icons.fingerprint_rounded,
++                      color: AuraColors.positive,
++                      size: 30,
++                    ),
++                ],
++              ),
++              AuraOrbit(score: account.score, size: 180),
++              FittedBox(
++                fit: BoxFit.scaleDown,
++                child: Text('${account.score}', style: AuraType.scoreHero),
++              ),
++              const SizedBox(height: 8),
++              Text(account.handle, style: AuraType.bodyStrong),
++              const SizedBox(height: 24),
++              const Divider(),
++              const SizedBox(height: 16),
++              const Wrap(
++                alignment: WrapAlignment.center,
++                spacing: 20,
++                runSpacing: 8,
++                children: [
++                  AuraEyebrow(
++                    'made by your people',
++                    color: AuraColors.textMuted,
++                  ),
++                  _FriendCount(),
++                ],
++              ),
++            ],
+           ),
+         ),
+-        const SizedBox(height: AuraSpacing.lg),
+-        const Center(child: _FriendCount()),
+-        const SizedBox(height: AuraSpacing.xxl),
+-        if (prototypeMode) const PrototypePanel(),
++        const SizedBox(height: 20),
++        const SizedBox(height: 24),
++        Row(
++          children: [
++            Expanded(
++              child: Text(
++                'good energy travels.',
++                style: AuraType.headingMedium,
++              ),
++            ),
++            IconButton(
++              tooltip: 'find your people',
++              onPressed: () => AppRouter.pushTo(context, AuraRoutes.addFriend),
++              icon: const Icon(Icons.arrow_outward_rounded),
++            ),
++          ],
++        ),
++        const SizedBox(height: 8),
+         Text(
+-          'send aura to a friend. your score updates live when they send to you.',
+-          textAlign: TextAlign.center,
+-          style: AuraType.bodySmall,
++          'Someone had your back? Made your day? Send them a little aura.',
++          style: AuraType.body.copyWith(color: AuraColors.textMuted),
+         ),
++        const SizedBox(height: 20),
++        AuraCard(
++          onTap: () => AppRouter.pushTo(context, AuraRoutes.friends),
++          child: Row(
++            children: [
++              const Icon(
++                Icons.people_alt_outlined,
++                color: AuraColors.positive,
++                size: 30,
++              ),
++              const SizedBox(width: 16),
++              Expanded(
++                child: Column(
++                  crossAxisAlignment: CrossAxisAlignment.start,
++                  children: [
++                    Text('your inner circle', style: AuraType.bodyStrong),
++                    const SizedBox(height: 4),
++                    const _FriendCount(),
++                  ],
++                ),
++              ),
++              const Icon(Icons.arrow_forward_rounded),
++            ],
++          ),
++        ),
++        const SizedBox(height: 20),
++        if (prototypeMode) const PrototypePanel(),
++        const SizedBox(height: 16),
+       ],
+     );
+   }
+@@ -178,13 +251,11 @@ class _NeedsProfile extends ConsumerWidget {
+   }
+ }
+ 
+-class _Failed extends StatelessWidget {
+-  const _Failed({required this.error});
+-
+-  final Object error;
++class _Failed extends ConsumerWidget {
++  const _Failed();
+ 
+   @override
+-  Widget build(BuildContext context) {
++  Widget build(BuildContext context, WidgetRef ref) {
+     return Center(
+       child: Padding(
+         padding: const EdgeInsets.all(AuraSpacing.screenPadding),
+@@ -197,15 +268,16 @@ class _Failed extends StatelessWidget {
+               textAlign: TextAlign.center,
+             ),
+             const SizedBox(height: AuraSpacing.md),
+-            // The message is shown, not swallowed. This is a beta on one device;
+-            // a generic "something went wrong" here would cost more debugging
+-            // time than the leak of a Firestore error code is worth. Worth
+-            // revisiting before a public release.
+             Text(
+-              '$error',
++              'check your connection and try again.',
+               style: AuraType.bodySmall.copyWith(color: AuraColors.negative),
+               textAlign: TextAlign.center,
+             ),
++            const SizedBox(height: 24),
++            FilledButton(
++              onPressed: () => ref.invalidate(currentUserProvider),
++              child: const Text('try again'),
++            ),
+           ],
+         ),
+       ),
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/onboarding/presentation/onboarding_screen.dart b/app/lib/features/onboarding/presentation/onboarding_screen.dart
+index 9a7ca49..756e0a2 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/onboarding/presentation/onboarding_screen.dart
++++ b/app/lib/features/onboarding/presentation/onboarding_screen.dart
+@@ -8,6 +8,8 @@ import '../../../core/theme/aura_colors.dart';
+ import '../../../core/theme/aura_spacing.dart';
+ import '../../../core/theme/aura_typography.dart';
+ import '../../../shared/widgets/aura_wordmark.dart';
++import '../../../shared/widgets/aura_identity.dart';
++import '../../../core/theme/aura_motion.dart';
+ import '../../../prototype/prototype_panel.dart';
+ import 'onboarding_art.dart';
+ 
+@@ -63,7 +65,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
+     ),
+   ];
+ 
+-  static const _pageTurn = Duration(milliseconds: 320);
++  Duration get _pageTurn =>
++      AuraMotion.respecting(context, const Duration(milliseconds: 320));
+ 
+   @override
+   void initState() {
+@@ -86,12 +89,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
+       unawaited(context.push(AuraRoutes.signup));
+       return;
+     }
++    if (_pageTurn == Duration.zero) {
++      _pageController.jumpToPage(_page + 1);
++      return;
++    }
+     unawaited(
+       _pageController.nextPage(duration: _pageTurn, curve: Curves.easeOutCubic),
+     );
+   }
+ 
+   void _previous() {
++    if (_pageTurn == Duration.zero) {
++      _pageController.jumpToPage(_page - 1);
++      return;
++    }
+     unawaited(
+       _pageController.previousPage(
+         duration: _pageTurn,
+@@ -138,7 +149,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
+                 ],
+               ),
+               const SizedBox(height: AuraSpacing.lg),
+-              if (widget.showPrototype) const PrototypePanel(compact: true),
+               Expanded(
+                 child: PageView.builder(
+                   controller: _pageController,
+@@ -149,6 +159,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
+               ),
+               _PageDots(count: _pages.length, current: _page),
+               const SizedBox(height: AuraSpacing.lg),
++              if (widget.showPrototype) ...[
++                const PrototypePanel(compact: true),
++                const SizedBox(height: 12),
++              ],
+               // Primary action sits at the bottom, inside the thumb's natural
+               // arc on a phone held one-handed.
+               SizedBox(
+@@ -198,7 +212,10 @@ class _PageDots extends StatelessWidget {
+           children: [
+             for (var index = 0; index < count; index++)
+               AnimatedContainer(
+-                duration: const Duration(milliseconds: 200),
++                duration: AuraMotion.respecting(
++                  context,
++                  const Duration(milliseconds: 200),
++                ),
+                 width: index == current ? 24 : 8,
+                 height: 8,
+                 margin: const EdgeInsets.symmetric(horizontal: 4),
+@@ -234,17 +251,40 @@ class _OnboardingPage extends StatelessWidget {
+     return SingleChildScrollView(
+       child: Column(
+         children: [
+-          SizedBox(height: 260, child: Center(child: visual)),
+-          const SizedBox(height: AuraSpacing.xl),
+-          Text(
+-            title,
+-            textAlign: TextAlign.center,
+-            style: AuraType.headingLarge,
++          const SizedBox(height: 12),
++          Container(
++            height: 250 * MediaQuery.textScalerOf(context).scale(16) / 16,
++            width: double.infinity,
++            decoration: BoxDecoration(
++              color: AuraColors.surface,
++              borderRadius: BorderRadius.circular(32),
++              border: Border.all(color: AuraColors.surfaceBorder),
++            ),
++            child: Stack(
++              children: [
++                const Positioned(
++                  top: 20,
++                  left: 20,
++                  child: AuraEyebrow('the aura effect'),
++                ),
++                Center(child: visual),
++                const Positioned(
++                  bottom: 16,
++                  right: 20,
++                  child: Icon(
++                    Icons.north_east_rounded,
++                    color: AuraColors.positive,
++                  ),
++                ),
++              ],
++            ),
+           ),
++          const SizedBox(height: AuraSpacing.xl),
++          Text(title, textAlign: TextAlign.left, style: AuraType.headingLarge),
+           const SizedBox(height: AuraSpacing.sm),
+           Text(
+             body,
+-            textAlign: TextAlign.center,
++            textAlign: TextAlign.left,
+             style: AuraType.body.copyWith(color: AuraColors.textMuted),
+           ),
+         ],
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/onboarding/presentation/signup_flow_screen.dart b/app/lib/features/onboarding/presentation/signup_flow_screen.dart
+index 2c23624..8b8a6ac 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/onboarding/presentation/signup_flow_screen.dart
++++ b/app/lib/features/onboarding/presentation/signup_flow_screen.dart
+@@ -13,6 +13,7 @@ import '../../../features/auth/application/auth_providers.dart';
+ import '../../../features/auth/data/auth_repository.dart';
+ import '../../../features/auth/data/user_repository.dart';
+ import '../../../shared/widgets/aura_card.dart';
++import '../../../shared/widgets/aura_identity.dart';
+ import '../../../prototype/prototype_runtime.dart';
+ 
+ /// Signup: email → password → age gate → username → review.
+@@ -406,6 +407,16 @@ class _SignupFlowScreenState extends ConsumerState<SignupFlowScreen> {
+           padding: const EdgeInsets.all(AuraSpacing.screenPadding),
+           child: Column(
+             children: [
++              Row(
++                children: [
++                  const Expanded(child: AuraEyebrow('make it yours')),
++                  Text(
++                    '${_step.index + 1} / ${_SignupStep.values.length}',
++                    style: AuraType.bodySmall,
++                  ),
++                ],
++              ),
++              const SizedBox(height: 12),
+               Semantics(
+                 label:
+                     'step ${_step.index + 1} of ${_SignupStep.values.length}',
+@@ -694,7 +705,7 @@ class _ReviewStep extends StatelessWidget {
+         const SizedBox(height: AuraSpacing.md),
+         Text(
+           isMinor
+-              ? 'because you are under 18, leaderboards start off and your point range is tighter. you can change the first one in settings.'
++              ? 'because you are under 18, leaderboards stay off and your point range is tighter.'
+               : 'you can change any of this later in settings.',
+           style: AuraType.bodySmall,
+         ),
+@@ -714,9 +725,16 @@ class _ReviewRow extends StatelessWidget {
+     return Row(
+       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+       children: [
+-        Text(label, style: AuraType.bodySmall),
++        Expanded(flex: 3, child: Text(label, style: AuraType.bodySmall)),
+         const SizedBox(width: AuraSpacing.md),
+-        Text(value, style: AuraType.bodyStrong),
++        Expanded(
++          flex: 2,
++          child: Text(
++            value,
++            textAlign: TextAlign.right,
++            style: AuraType.bodyStrong,
++          ),
++        ),
+       ],
+     );
+   }
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/onboarding/presentation/splash_screen.dart b/app/lib/features/onboarding/presentation/splash_screen.dart
+index 112313c..b3b369e 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/onboarding/presentation/splash_screen.dart
++++ b/app/lib/features/onboarding/presentation/splash_screen.dart
+@@ -7,7 +7,7 @@ import '../../../core/router/app_router.dart';
+ import '../../../core/theme/aura_motion.dart';
+ import '../../../core/theme/aura_spacing.dart';
+ import '../../../features/auth/application/auth_providers.dart';
+-import '../../../shared/widgets/aura_orb.dart';
++import '../../../shared/widgets/aura_identity.dart';
+ import '../../../shared/widgets/aura_wordmark.dart';
+ 
+ /// Spec §5.1: max 1.5–2s, teal orb pulsing once, wordmark fading in beneath.
+@@ -130,7 +130,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
+         child: Column(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
+-            const AuraOrb(score: 1000, size: 180),
++            const AuraOrbit(score: 1000, size: 220),
+             const SizedBox(height: AuraSpacing.xl),
+             if (reduceMotion)
+               const AuraWordmark()
+@@ -152,6 +152,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
+                 },
+                 child: const AuraWordmark(),
+               ),
++            const SizedBox(height: 20),
++            const AuraEyebrow('your reputation, remixed'),
+           ],
+         ),
+       ),
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/profile/presentation/photo_step.dart b/app/lib/features/profile/presentation/photo_step.dart
+index f87d31b..f3f600a 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/profile/presentation/photo_step.dart
++++ b/app/lib/features/profile/presentation/photo_step.dart
+@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
+ import '../../../core/theme/aura_colors.dart';
+ import '../../../core/theme/aura_spacing.dart';
+ import '../../../core/theme/aura_typography.dart';
+-import '../../../shared/widgets/aura_orb.dart';
++import '../../../shared/widgets/aura_identity.dart';
+ 
+ /// The §5.3 profile-photo step — **UI only, blocked on Cloud Storage.**
+ ///
+@@ -40,6 +40,8 @@ class PhotoStep extends StatelessWidget {
+     return ListView(
+       padding: const EdgeInsets.all(AuraSpacing.screenPadding),
+       children: [
++        const AuraEyebrow('your signature look'),
++        const SizedBox(height: 12),
+         Text('add a photo?', style: AuraType.headingLarge),
+         const SizedBox(height: AuraSpacing.sm),
+         Text(
+@@ -47,7 +49,7 @@ class PhotoStep extends StatelessWidget {
+           style: AuraType.body.copyWith(color: AuraColors.textMuted),
+         ),
+         const SizedBox(height: AuraSpacing.xxl),
+-        Center(child: AuraOrb(score: score, size: 160)),
++        Center(child: AuraOrbit(score: score, size: 220)),
+         const SizedBox(height: AuraSpacing.lg),
+         Center(child: Text('@$username', style: AuraType.headingMedium)),
+         const SizedBox(height: AuraSpacing.xxl),
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/send/presentation/send_aura_screen.dart b/app/lib/features/send/presentation/send_aura_screen.dart
+index 649efef..dc016d9 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/send/presentation/send_aura_screen.dart
++++ b/app/lib/features/send/presentation/send_aura_screen.dart
+@@ -9,20 +9,27 @@ import '../../../core/models/public_profile.dart';
+ import '../../../core/theme/aura_colors.dart';
+ import '../../../core/theme/aura_spacing.dart';
+ import '../../../core/theme/aura_typography.dart';
++import '../../../core/router/app_router.dart';
++import '../../../shared/widgets/aura_identity.dart';
+ import '../../auth/application/auth_providers.dart';
+ import '../../friends/application/friends_providers.dart';
+ import '../data/aura_api.dart';
+ 
+ const _chips = [
+-  'showed up for me', 'had my back', 'made everyone laugh',
+-  'left me on read', 'broke a promise',
++  'showed up for me',
++  'had my back',
++  'made everyone laugh',
++  'left me on read',
++  'broke a promise',
+ ];
+ 
+ String _newKey() {
+   final bytes = List<int>.generate(16, (_) => Random.secure().nextInt(256));
+   bytes[6] = (bytes[6] & 0x0f) | 0x40;
+   bytes[8] = (bytes[8] & 0x3f) | 0x80;
+-  final hex = bytes.map((value) => value.toRadixString(16).padLeft(2, '0')).join();
++  final hex = bytes
++      .map((value) => value.toRadixString(16).padLeft(2, '0'))
++      .join();
+   return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-${hex.substring(12, 16)}-'
+       '${hex.substring(16, 20)}-${hex.substring(20)}';
+ }
+@@ -57,21 +64,84 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
+     final myUid = ref.watch(authStateProvider).value?.uid;
+     final caps = me?.pointCaps;
+     return Scaffold(
+-      appBar: AppBar(title: Text('send aura', style: AuraType.headingMedium)),
++      appBar: AppBar(
++        leading: const AuraBackButton(),
++        title: Text('send aura', style: AuraType.headingMedium),
++      ),
++      bottomNavigationBar: me == null || friends is! AsyncData<List<Friendship>>
++          ? null
++          : Padding(
++              padding: EdgeInsets.only(
++                bottom: MediaQuery.viewInsetsOf(context).bottom,
++              ),
++              child: SafeArea(
++                minimum: const EdgeInsets.fromLTRB(20, 12, 20, 12),
++                child: Column(
++                  mainAxisSize: MainAxisSize.min,
++                  crossAxisAlignment: CrossAxisAlignment.stretch,
++                  children: [
++                    if (_error != null) ...[
++                      Semantics(
++                        liveRegion: true,
++                        child: Text(
++                          _error!,
++                          style: AuraType.bodySmall.copyWith(
++                            color: AuraColors.negative,
++                          ),
++                        ),
++                      ),
++                      const SizedBox(height: 12),
++                    ],
++                    FilledButton(
++                      onPressed:
++                          _sending ||
++                              _recipientUid == null ||
++                              _reason.text.trim().isEmpty ||
++                              !me.pointCaps.allows(_points)
++                          ? null
++                          : () => _send(me),
++                      child: Text(_sending ? 'sending…' : 'send aura'),
++                    ),
++                  ],
++                ),
++              ),
++            ),
+       body: SafeArea(
+         child: switch (friends) {
+-          AsyncData(value: final List<Friendship> accepted) when me != null && myUid != null =>
++          AsyncData(value: final List<Friendship> accepted)
++              when me != null && myUid != null =>
+             ListView(
+               padding: const EdgeInsets.all(AuraSpacing.screenPadding),
+               children: [
++                const AuraIntro(
++                  label: 'pass the energy',
++                  title: 'make their day.',
++                  body: 'Pick a person. Name the moment. Send some aura.',
++                ),
+                 Text('1. pick a friend', style: AuraType.headingMedium),
+                 const SizedBox(height: AuraSpacing.sm),
+-                if (accepted.isEmpty) const Text('add and accept a friend first.'),
++                if (accepted.isEmpty)
++                  Column(
++                    crossAxisAlignment: CrossAxisAlignment.stretch,
++                    children: [
++                      const Text('add and accept a friend first.'),
++                      const SizedBox(height: 12),
++                      OutlinedButton.icon(
++                        onPressed: () =>
++                            AppRouter.pushTo(context, AuraRoutes.addFriend),
++                        icon: const Icon(Icons.person_add_alt_rounded),
++                        label: const Text('find a friend'),
++                      ),
++                    ],
++                  ),
+                 for (final friendship in accepted)
+                   _FriendChoice(
+                     uid: friendship.otherMember(myUid),
+                     selected: _recipientUid == friendship.otherMember(myUid),
+-                    onSelected: (uid) => setState(() { _recipientUid = uid; _idempotencyKey = _newKey(); }),
++                    onSelected: (uid) => setState(() {
++                      _recipientUid = uid;
++                      _idempotencyKey = _newKey();
++                    }),
+                   ),
+                 const SizedBox(height: AuraSpacing.xl),
+                 Text('2. what happened?', style: AuraType.headingMedium),
+@@ -83,6 +153,11 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
+                     for (final chip in _chips)
+                       ChoiceChip(
+                         label: Text(chip),
++                        labelStyle: AuraType.bodyStrong.copyWith(
++                          color: _chip == chip
++                              ? AuraColors.background
++                              : AuraColors.textPrimary,
++                        ),
+                         selected: _chip == chip,
+                         onSelected: (_) => setState(() {
+                           _chip = chip;
+@@ -96,19 +171,39 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
+                 TextField(
+                   controller: _reason,
+                   maxLength: 80,
+-                  decoration: const InputDecoration(labelText: 'or write your own moment'),
+-                  onChanged: (_) => setState(() { _chip = null; _idempotencyKey = _newKey(); }),
++                  decoration: const InputDecoration(
++                    labelText: 'or write your own moment',
++                  ),
++                  onChanged: (_) => setState(() {
++                    _chip = null;
++                    _idempotencyKey = _newKey();
++                  }),
+                 ),
+                 const SizedBox(height: AuraSpacing.lg),
+                 Text('3. points', style: AuraType.headingMedium),
+-                Text(
+-                  '${_points > 0 ? '+' : ''}$_points aura',
+-                  style: AuraType.scoreSmall.copyWith(color: AuraColors.forPoints(_points)),
++                Container(
++                  padding: const EdgeInsets.all(24),
++                  margin: const EdgeInsets.only(top: 12),
++                  decoration: BoxDecoration(
++                    color: AuraColors.surface,
++                    borderRadius: AuraRadius.cardLargeAll,
++                    border: Border.all(color: AuraColors.surfaceBorder),
++                  ),
++                  child: Text(
++                    '${_points > 0 ? '+' : ''}$_points aura',
++                    textAlign: TextAlign.center,
++                    style: AuraType.scoreLarge.copyWith(
++                      color: AuraColors.forPoints(_points),
++                    ),
++                  ),
+                 ),
+                 Slider(
++                  label: '${_points > 0 ? '+' : ''}$_points aura',
+                   min: caps!.maxNegative.toDouble(),
+                   max: caps.maxPositive.toDouble(),
+-                  value: _points.clamp(caps.maxNegative, caps.maxPositive).toDouble(),
++                  value: _points
++                      .clamp(caps.maxNegative, caps.maxPositive)
++                      .toDouble(),
+                   onChanged: (value) => setState(() {
+                     final next = value.round();
+                     _points = next == 0 ? 1 : next;
+@@ -123,23 +218,25 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
+                     ButtonSegment(value: 'friends', label: Text('friends')),
+                   ],
+                   selected: {_visibility},
+-                  onSelectionChanged: (value) => setState(() { _visibility = value.first; _idempotencyKey = _newKey(); }),
++                  onSelectionChanged: (value) => setState(() {
++                    _visibility = value.first;
++                    _idempotencyKey = _newKey();
++                  }),
+                 ),
+-                const SizedBox(height: AuraSpacing.xl),
+-                if (_error != null) ...[
+-                  Text(_error!, style: AuraType.bodySmall.copyWith(color: AuraColors.negative)),
+-                  const SizedBox(height: AuraSpacing.md),
+-                ],
+-                FilledButton(
+-                  onPressed: _sending || _recipientUid == null || _reason.text.trim().isEmpty
+-                      ? null
+-                      : () => _send(me),
+-                  child: Text(_sending ? 'sending…' : 'send aura'),
++                const SizedBox(height: 12),
++                Text(
++                  _visibility == 'private'
++                      ? 'Only you and the recipient can see this moment.'
++                      : 'This moment is visible to friends.',
++                  style: AuraType.bodySmall,
+                 ),
++                const SizedBox(height: AuraSpacing.xl),
+                 const SizedBox(height: AuraSpacing.xxl),
+               ],
+             ),
+-          AsyncError() => const Center(child: Text('could not load your friends.')),
++          AsyncError() => const Center(
++            child: Text('could not load your friends.'),
++          ),
+           _ => const Center(child: CircularProgressIndicator()),
+         },
+       ),
+@@ -147,16 +244,32 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
+   }
+ 
+   Future<void> _send(AuraUser me) async {
+-    if (_sending || _recipientUid == null || !me.pointCaps.allows(_points)) return;
+-    setState(() { _sending = true; _error = null; });
++    if (_sending || _recipientUid == null || !me.pointCaps.allows(_points)) {
++      return;
++    }
++    setState(() {
++      _sending = true;
++      _error = null;
++    });
+     try {
+-      await ref.read(auraApiProvider).send(
+-        recipientUid: _recipientUid!, points: _points, reason: _reason.text.trim(),
+-        visibility: _visibility, idempotencyKey: _idempotencyKey, chipId: _chip,
+-      );
++      await ref
++          .read(auraApiProvider)
++          .send(
++            recipientUid: _recipientUid!,
++            points: _points,
++            reason: _reason.text.trim(),
++            visibility: _visibility,
++            idempotencyKey: _idempotencyKey,
++            chipId: _chip,
++          );
+       if (!mounted) return;
+-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('aura sent.')));
+-      Navigator.of(context).pop();
++      ScaffoldMessenger.of(context)
++          .showSnackBar(const SnackBar(content: Text('aura sent.')));
++      if (Navigator.of(context).canPop()) {
++        Navigator.of(context).pop();
++      } else {
++        AppRouter.replaceWith(context, AuraRoutes.home);
++      }
+     } on AuraApiFailure catch (error) {
+       if (mounted) setState(() => _error = error.message);
+     } catch (_) {
+@@ -168,7 +281,11 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
+ }
+ 
+ class _FriendChoice extends ConsumerWidget {
+-  const _FriendChoice({required this.uid, required this.selected, required this.onSelected});
++  const _FriendChoice({
++    required this.uid,
++    required this.selected,
++    required this.onSelected,
++  });
+   final String uid;
+   final bool selected;
+   final ValueChanged<String> onSelected;
+@@ -179,10 +296,30 @@ class _FriendChoice extends ConsumerWidget {
+     return switch (profile) {
+       AsyncData(value: final PublicProfile friend) => RadioGroup<String>(
+         groupValue: selected ? uid : null,
+-        onChanged: (value) { if (value != null) onSelected(value); },
+-        child: RadioListTile<String>(
+-          title: Text(friend.handle),
+-          value: uid,
++        onChanged: (value) {
++          if (value != null) onSelected(value);
++        },
++        child: Padding(
++          padding: const EdgeInsets.only(bottom: 8),
++          child: RadioListTile<String>(
++            shape: RoundedRectangleBorder(
++              borderRadius: AuraRadius.inputAll,
++              side: BorderSide(
++                color: selected
++                    ? AuraColors.positive
++                    : AuraColors.surfaceBorder,
++              ),
++            ),
++            tileColor: selected
++                ? AuraColors.positive.withValues(alpha: 0.08)
++                : AuraColors.surface,
++            contentPadding: const EdgeInsets.symmetric(
++              horizontal: 16,
++              vertical: 8,
++            ),
++            title: Text(friend.handle),
++            value: uid,
++          ),
+         ),
+       ),
+       _ => const SizedBox.shrink(),
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/settings/presentation/blocked_list_screen.dart b/app/lib/features/settings/presentation/blocked_list_screen.dart
+index 1dcffbe..13802c3 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/settings/presentation/blocked_list_screen.dart
++++ b/app/lib/features/settings/presentation/blocked_list_screen.dart
+@@ -5,6 +5,7 @@ import '../../../core/models/public_profile.dart';
+ import '../../../core/theme/aura_colors.dart';
+ import '../../../core/theme/aura_spacing.dart';
+ import '../../../core/theme/aura_typography.dart';
++import '../../../shared/widgets/aura_identity.dart';
+ import '../../auth/application/auth_providers.dart';
+ import '../../friends/application/friends_providers.dart';
+ import '../../friends/presentation/friend_tile.dart';
+@@ -25,6 +26,7 @@ class BlockedListScreen extends ConsumerWidget {
+ 
+     return Scaffold(
+       appBar: AppBar(
++        leading: const AuraBackButton(),
+         title: Text('blocked accounts', style: AuraType.headingMedium),
+       ),
+       body: SafeArea(
+@@ -123,9 +125,16 @@ class _Empty extends StatelessWidget {
+ 
+   @override
+   Widget build(BuildContext context) {
+-    return const _Centred(
+-      'nobody blocked.\n\nblocking someone removes them from your friends and '
+-      'stops them reaching you. they are not told.',
++    return const Column(
++      mainAxisAlignment: MainAxisAlignment.center,
++      children: [
++        Icon(Icons.shield_outlined, size: 64, color: AuraColors.positive),
++        SizedBox(height: 20),
++        _Centred(
++          'nobody blocked.\n\nblocking someone removes them from your friends and '
++          'stops them reaching you. they are not told.',
++        ),
++      ],
+     );
+   }
+ }
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/settings/presentation/delete_account_screen.dart b/app/lib/features/settings/presentation/delete_account_screen.dart
+index a56c45d..d239451 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/settings/presentation/delete_account_screen.dart
++++ b/app/lib/features/settings/presentation/delete_account_screen.dart
+@@ -6,6 +6,7 @@ import '../../../core/router/app_router.dart';
+ import '../../../core/theme/aura_colors.dart';
+ import '../../../core/theme/aura_spacing.dart';
+ import '../../../core/theme/aura_typography.dart';
++import '../../../shared/widgets/aura_identity.dart';
+ import '../../auth/application/auth_providers.dart';
+ import '../../safety/application/safety_providers.dart';
+ import '../../safety/data/safety_repository.dart';
+@@ -51,6 +52,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
+ 
+     return Scaffold(
+       appBar: AppBar(
++        leading: const AuraBackButton(),
+         title: Text('delete account', style: AuraType.headingMedium),
+       ),
+       body: SafeArea(
+@@ -67,6 +69,14 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
+     return ListView(
+       padding: const EdgeInsets.all(AuraSpacing.screenPadding),
+       children: [
++        const Icon(
++          Icons.heart_broken_outlined,
++          size: 56,
++          color: AuraColors.negative,
++        ),
++        const SizedBox(height: 24),
++        const AuraEyebrow('before you go', color: AuraColors.negative),
++        const SizedBox(height: 12),
+         Text('this cannot be undone.', style: AuraType.headingMedium),
+         const SizedBox(height: AuraSpacing.lg),
+ 
+@@ -102,9 +112,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
+         ConstrainedBox(
+           constraints: const BoxConstraints(minHeight: AuraTouch.minTarget),
+           child: FilledButton(
+-            style: FilledButton.styleFrom(
+-              backgroundColor: AuraColors.negative,
+-            ),
++            style: FilledButton.styleFrom(backgroundColor: AuraColors.negative),
+             onPressed: matches && !_busy ? () => _delete(account) : null,
+             child: _busy
+                 ? const SizedBox(
+@@ -130,9 +138,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
+   Future<void> _delete(AuraUser account) async {
+     setState(() => _busy = true);
+     try {
+-      await ref
+-          .read(accountDeletionServiceProvider)
+-          .deleteAccount(account.uid);
++      await ref.read(accountDeletionServiceProvider).deleteAccount(account.uid);
+       if (!mounted) return;
+       // Straight to onboarding rather than splash: splash branches on auth
+       // state, and the account it would branch on no longer exists.
+@@ -143,7 +149,8 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
+       ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(
+           content: Text(switch (failure.problem) {
+-            SafetyProblem.network => 'could not finish deleting. please try again.',
++            SafetyProblem.network =>
++              'could not finish deleting. please try again.',
+             SafetyProblem.permissionDenied => 'that is not allowed.',
+             _ when failure.code == 'recent-login-required' =>
+               'sign out and sign back in, then try deleting again.',
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/settings/presentation/settings_screen.dart b/app/lib/features/settings/presentation/settings_screen.dart
+index fe627c9..93dbec7 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/features/settings/presentation/settings_screen.dart
++++ b/app/lib/features/settings/presentation/settings_screen.dart
+@@ -6,6 +6,7 @@ import '../../../core/router/app_router.dart';
+ import '../../../core/theme/aura_colors.dart';
+ import '../../../core/theme/aura_spacing.dart';
+ import '../../../core/theme/aura_typography.dart';
++import '../../../shared/widgets/aura_identity.dart';
+ import '../../auth/application/auth_providers.dart';
+ import '../../auth/data/user_repository.dart';
+ import '../../safety/application/safety_providers.dart';
+@@ -31,6 +32,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+     final user = ref.watch(currentUserProvider);
+ 
+     return Scaffold(
++      bottomNavigationBar: const AuraNavigation(selected: 2),
+       appBar: AppBar(title: Text('settings', style: AuraType.headingMedium)),
+       body: SafeArea(
+         child: switch (user) {
+@@ -88,6 +90,14 @@ class _Body extends ConsumerWidget {
+     return ListView(
+       padding: const EdgeInsets.symmetric(vertical: AuraSpacing.md),
+       children: [
++        const Padding(
++          padding: EdgeInsets.symmetric(horizontal: AuraSpacing.screenPadding),
++          child: AuraIntro(
++            label: 'your space',
++            title: 'your aura.\nyour rules.',
++            body: 'Choose who gets access to your energy.',
++          ),
++        ),
+         const _Heading('who can send you aura'),
+         // `RadioGroup` rather than per-tile `groupValue`/`onChanged`, which
+         // Flutter deprecated after 3.32.
+@@ -143,6 +153,7 @@ class _Body extends ConsumerWidget {
+         const _Heading('safety'),
+         ListTile(
+           onTap: () => AppRouter.pushTo(context, AuraRoutes.blockedList),
++          leading: const Icon(Icons.shield_outlined),
+           title: Text('blocked accounts', style: AuraType.body),
+           subtitle: Text(
+             blockedCount == 1 ? '1 account' : '$blockedCount accounts',
+@@ -153,8 +164,18 @@ class _Body extends ConsumerWidget {
+ 
+         const SizedBox(height: AuraSpacing.xl),
+         const _Heading('account'),
++        ListTile(
++          leading: const Icon(Icons.face_retouching_natural_outlined),
++          title: Text('profile photo', style: AuraType.body),
++          trailing: const Icon(Icons.chevron_right_rounded),
++          onTap: () => AppRouter.pushTo(context, AuraRoutes.photo),
++        ),
+         ListTile(
+           onTap: () => AppRouter.pushTo(context, AuraRoutes.deleteAccount),
++          leading: const Icon(
++            Icons.delete_outline_rounded,
++            color: AuraColors.negative,
++          ),
+           title: Text(
+             'delete my account',
+             style: AuraType.body.copyWith(color: AuraColors.negative),
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/prototype/local_photo_step.dart b/app/lib/prototype/local_photo_step.dart
+index 3bacd28..48f03e9 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/prototype/local_photo_step.dart
++++ b/app/lib/prototype/local_photo_step.dart
+@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
+ 
+ import '../features/auth/application/auth_providers.dart';
+ import '../core/theme/aura_spacing.dart';
+-import '../shared/widgets/aura_orb.dart';
++import '../shared/widgets/aura_identity.dart';
+ import '../shared/widgets/profile_photo.dart';
+ import 'prototype_runtime.dart';
+ 
+@@ -89,6 +89,8 @@ class _LocalPhotoStepState extends ConsumerState<LocalPhotoStep> {
+     return ListView(
+       padding: const EdgeInsets.all(AuraSpacing.screenPadding),
+       children: [
++        const AuraEyebrow('your signature look'),
++        const SizedBox(height: 12),
+         Text('add a photo?', style: Theme.of(context).textTheme.headlineMedium),
+         const Text(
+           'Your photo stays on this device. You can also keep the orb.',
+@@ -96,7 +98,7 @@ class _LocalPhotoStepState extends ConsumerState<LocalPhotoStep> {
+         const SizedBox(height: AuraSpacing.xl),
+         Center(
+           child: account.photoUrl == null
+-              ? AuraOrb(score: account.score, size: 160)
++              ? AuraOrbit(score: account.score, size: 220)
+               : ProfilePhoto(url: account.photoUrl!, size: 160),
+         ),
+         const SizedBox(height: AuraSpacing.lg),
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/prototype/prototype_panel.dart b/app/lib/prototype/prototype_panel.dart
+index 6550dcd..ac1c707 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/prototype/prototype_panel.dart
++++ b/app/lib/prototype/prototype_panel.dart
+@@ -2,15 +2,23 @@ import 'dart:async';
+ 
+ import 'package:flutter/material.dart';
+ import 'package:flutter_riverpod/flutter_riverpod.dart';
++import 'package:go_router/go_router.dart';
+ 
+ import '../core/router/app_router.dart';
+ import '../core/theme/aura_spacing.dart';
++import '../core/theme/aura_colors.dart';
++import '../core/theme/aura_typography.dart';
+ import '../features/auth/application/auth_providers.dart';
+ import 'prototype_runtime.dart';
+ 
+ class PrototypePanel extends ConsumerStatefulWidget {
+-  const PrototypePanel({super.key, this.compact = false});
++  const PrototypePanel({
++    super.key,
++    this.compact = false,
++    this.expanded = false,
++  });
+   final bool compact;
++  final bool expanded;
+   @override
+   ConsumerState<PrototypePanel> createState() => _PrototypePanelState();
+ }
+@@ -32,7 +40,11 @@ class _PrototypePanelState extends ConsumerState<PrototypePanel> {
+       await ref.read(authStateProvider.future);
+       ref.invalidate(currentUserProvider);
+       await ref.read(currentUserProvider.future);
+-      if (mounted) AppRouter.replaceWith(context, route);
++      if (mounted) {
++        final router = GoRouter.of(context);
++        if (ModalRoute.of(context) is PopupRoute) Navigator.of(context).pop();
++        unawaited(router.replace<void>(route));
++      }
+     } catch (_) {
+       if (mounted) {
+         setState(
+@@ -81,89 +93,137 @@ class _PrototypePanelState extends ConsumerState<PrototypePanel> {
+       stream: store.watch(() {}),
+       builder: (context, _) {
+         final history = store.history;
+-        return Card(
+-          child: Padding(
+-            padding: const EdgeInsets.all(AuraSpacing.md),
+-            child: Column(
+-              crossAxisAlignment: CrossAxisAlignment.stretch,
+-              mainAxisSize: MainAxisSize.min,
+-              children: [
++        final controls = Padding(
++          padding: const EdgeInsets.all(AuraSpacing.md),
++          child: Column(
++            crossAxisAlignment: CrossAxisAlignment.stretch,
++            mainAxisSize: MainAxisSize.min,
++            children: [
++              const Text(
++                'Saved on this device. Use demo details; nothing is sent online.',
++              ),
++              if (!widget.compact)
+                 const Text(
+-                  'local prototype',
+-                  style: TextStyle(fontWeight: FontWeight.bold),
++                  'Search @jordan to send a request. @alex has an incoming request.',
+                 ),
+-                const Text(
+-                  'Saved on this device. Use demo details; nothing is sent online.',
++              if (!widget.compact && store.currentUid == null)
++                FilledButton(
++                  onPressed: _busy
++                      ? null
++                      : () => _run(store.openDemo, AuraRoutes.home),
++                  child: const Text('try the demo'),
+                 ),
+-                if (!widget.compact)
++              DropdownButtonFormField<String>(
++                key: ValueKey(store.currentUid),
++                initialValue: store.currentUid,
++                isExpanded: true,
++                decoration: const InputDecoration(
++                  labelText: 'view as / return to demo account',
++                ),
++                items: [
++                  for (final account in store.accounts)
++                    DropdownMenuItem(
++                      value: account.uid,
++                      child: Text(account.handle),
++                    ),
++                ],
++                onChanged: _busy
++                    ? null
++                    : (uid) {
++                        if (uid != null) {
++                          unawaited(
++                            _run(() => store.resume(uid), AuraRoutes.home),
++                          );
++                        }
++                      },
++              ),
++              if (!widget.compact && store.currentUid != null) ...[
++                TextButton(
++                  onPressed: _busy
++                      ? null
++                      : () => AppRouter.pushTo(context, AuraRoutes.photo),
++                  child: const Text('change profile photo'),
++                ),
++                const SizedBox(height: AuraSpacing.sm),
++                const Text('recent local aura'),
++                if (history.isEmpty)
+                   const Text(
+-                    'Search @jordan to send a request. @alex has an incoming request.',
++                    'Send aura, then switch to the recipient to see their score.',
+                   ),
+-                if (store.currentUid == null)
+-                  FilledButton(
+-                    onPressed: _busy
+-                        ? null
+-                        : () => _run(store.openDemo, AuraRoutes.home),
+-                    child: const Text('try the demo'),
++                for (final send in history.take(5))
++                  Text(
++                    '${store.profile(send['sender'] as String)?.handle ?? 'deleted'} → '
++                    '${store.profile(send['recipient'] as String)?.handle ?? 'deleted'}: '
++                    '${(send['points'] as int) > 0 ? '+' : ''}${send['points']} · ${send['reason']}',
+                   ),
+-                DropdownButtonFormField<String>(
+-                  key: ValueKey(store.currentUid),
+-                  initialValue: store.currentUid,
+-                  isExpanded: true,
+-                  decoration: const InputDecoration(
+-                    labelText: 'view as / return to demo account',
++              ],
++              if (_error != null)
++                Text(
++                  _error!,
++                  style: TextStyle(color: Theme.of(context).colorScheme.error),
++                ),
++              TextButton(
++                onPressed: _busy ? null : _reset,
++                child: Text(_busy ? 'saving…' : 'reset prototype'),
++              ),
++            ],
++          ),
++        );
++        return Column(
++          crossAxisAlignment: CrossAxisAlignment.stretch,
++          children: [
++            if (widget.compact && store.currentUid == null) ...[
++              FilledButton.icon(
++                onPressed: _busy
++                    ? null
++                    : () => _run(store.openDemo, AuraRoutes.home),
++                icon: const Icon(Icons.play_arrow_rounded),
++                label: const Text('try the demo'),
++              ),
++              const SizedBox(height: 8),
++              Text(
++                'Device-only demo · use sample details',
++                textAlign: TextAlign.center,
++                style: AuraType.caption,
++              ),
++              const SizedBox(height: 8),
++            ],
++            if (widget.compact)
++              TextButton(
++                onPressed: () => showModalBottomSheet<void>(
++                  context: context,
++                  isScrollControlled: true,
++                  useSafeArea: true,
++                  builder: (context) => const FractionallySizedBox(
++                    heightFactor: 0.7,
++                    child: SingleChildScrollView(
++                      child: PrototypePanel(expanded: true),
++                    ),
+                   ),
+-                  items: [
+-                    for (final account in store.accounts)
+-                      DropdownMenuItem(
+-                        value: account.uid,
+-                        child: Text(account.handle),
+-                      ),
+-                  ],
+-                  onChanged: _busy
+-                      ? null
+-                      : (uid) {
+-                          if (uid != null) {
+-                            unawaited(
+-                              _run(() => store.resume(uid), AuraRoutes.home),
+-                            );
+-                          }
+-                        },
+                 ),
+-                if (!widget.compact && store.currentUid != null) ...[
+-                  TextButton(
+-                    onPressed: _busy
+-                        ? null
+-                        : () => AppRouter.pushTo(context, AuraRoutes.photo),
+-                    child: const Text('change profile photo'),
++                child: const Text('demo controls'),
++              )
++            else
++              Material(
++                color: AuraColors.surface,
++                borderRadius: AuraRadius.cardAll,
++                clipBehavior: Clip.antiAlias,
++                child: ExpansionTile(
++                  initiallyExpanded: widget.expanded,
++                  key: const PageStorageKey('prototype-tools'),
++                  title: Text('local prototype', style: AuraType.bodyStrong),
++                  subtitle: Text(
++                    'demo controls · saved on this device',
++                    style: AuraType.caption,
+                   ),
+-                  const SizedBox(height: AuraSpacing.sm),
+-                  const Text('recent local aura'),
+-                  if (history.isEmpty)
+-                    const Text(
+-                      'Send aura, then switch to the recipient to see their score.',
+-                    ),
+-                  for (final send in history.take(5))
+-                    Text(
+-                      '${store.profile(send['sender'] as String)?.handle ?? 'deleted'} → '
+-                      '${store.profile(send['recipient'] as String)?.handle ?? 'deleted'}: '
+-                      '${(send['points'] as int) > 0 ? '+' : ''}${send['points']} · ${send['reason']}',
+-                    ),
+-                ],
+-                if (_error != null)
+-                  Text(
+-                    _error!,
+-                    style: TextStyle(
+-                      color: Theme.of(context).colorScheme.error,
+-                    ),
++                  leading: const Icon(
++                    Icons.science_outlined,
++                    color: AuraColors.positive,
+                   ),
+-                TextButton(
+-                  onPressed: _busy ? null : _reset,
+-                  child: Text(_busy ? 'saving…' : 'reset prototype'),
++                  children: [controls],
+                 ),
+-              ],
+-            ),
+-          ),
++              ),
++          ],
+         );
+       },
+     );
+diff --git a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/shared/widgets/aura_card.dart b/app/lib/shared/widgets/aura_card.dart
+index aab75eb..c260f51 100644
+--- a/docs/rain-skill/backups/2026-10-11-gen-z-ui/lib/shared/widgets/aura_card.dart
++++ b/app/lib/shared/widgets/aura_card.dart
+@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
+ import '../../core/theme/aura_colors.dart';
+ import '../../core/theme/aura_spacing.dart';
+ 
+-/// A raised surface, per spec section 6.6: "glassmorphism-lite — subtle
+-/// translucency with a soft border", 16–24px radius, one idea per card.
++/// A solid raised surface with a quiet gradient and deliberate border.
+ ///
+ /// Card styling lives here rather than in `ThemeData.cardTheme` on purpose, so
+ /// the border and radius are explicit and can't be silently dropped by a
+@@ -36,7 +35,11 @@ class AuraCard extends StatelessWidget {
+ 
+     final surface = DecoratedBox(
+       decoration: BoxDecoration(
+-        color: AuraColors.surface,
++        gradient: const LinearGradient(
++          begin: Alignment.topLeft,
++          end: Alignment.bottomRight,
++          colors: [AuraColors.surfaceRaised, AuraColors.surface],
++        ),
+         borderRadius: radius,
+         border: Border.all(color: borderColor ?? AuraColors.surfaceBorder),
+       ),
+diff --git a/app/lib/shared/widgets/aura_identity.dart b/app/lib/shared/widgets/aura_identity.dart
+new file mode 100644
+index 0000000..16cc9a1
+--- /dev/null
++++ b/app/lib/shared/widgets/aura_identity.dart
+@@ -0,0 +1,169 @@
++import 'dart:math' as math;
++
++import 'package:flutter/material.dart';
++import 'package:go_router/go_router.dart';
++
++import '../../core/router/aura_routes.dart';
++import '../../core/theme/aura_colors.dart';
++import '../../core/theme/aura_typography.dart';
++import 'aura_orb.dart';
++
++/// Small editorial label used to separate content without another heavy card.
++class AuraEyebrow extends StatelessWidget {
++  const AuraEyebrow(this.text, {super.key, this.color = AuraColors.positive});
++  final String text;
++  final Color color;
++
++  @override
++  Widget build(BuildContext context) => Text(
++    text.toUpperCase(),
++    style: AuraType.label.copyWith(
++      fontSize: 12,
++      color: color,
++      letterSpacing: 2,
++    ),
++  );
++}
++
++/// Orbit lines give the existing animated orb a recognizable collectible frame.
++class AuraOrbit extends StatelessWidget {
++  const AuraOrbit({super.key, required this.score, this.size = 240});
++  final int score;
++  final double size;
++
++  @override
++  Widget build(BuildContext context) => SizedBox.square(
++    dimension: size,
++    child: Stack(
++      alignment: Alignment.center,
++      children: [
++        Positioned.fill(
++          child: ExcludeSemantics(child: CustomPaint(painter: _OrbitPainter())),
++        ),
++        AuraOrb(score: score, size: size * 0.86),
++      ],
++    ),
++  );
++}
++
++class _OrbitPainter extends CustomPainter {
++  @override
++  void paint(Canvas canvas, Size size) {
++    final center = size.center(Offset.zero);
++    final radius = size.shortestSide * 0.43;
++    final line = Paint()
++      ..color = AuraColors.positive.withValues(alpha: 0.24)
++      ..style = PaintingStyle.stroke
++      ..strokeWidth = 1;
++    canvas.drawCircle(center, radius, line);
++    canvas.save();
++    canvas.translate(center.dx, center.dy);
++    canvas.rotate(-math.pi / 6);
++    canvas.drawOval(
++      Rect.fromCenter(
++        center: Offset.zero,
++        width: radius * 2.15,
++        height: radius * 0.84,
++      ),
++      line,
++    );
++    canvas.restore();
++    final dot = Paint()..color = AuraColors.positive;
++    canvas.drawCircle(center + Offset(radius * 0.71, -radius * 0.71), 4, dot);
++    canvas.drawCircle(center + Offset(-radius * 0.94, radius * 0.34), 2.5, dot);
++  }
++
++  @override
++  bool shouldRepaint(_OrbitPainter oldDelegate) => false;
++}
++
++/// Existing top-level routes, exposed together without adding placeholder tabs.
++class AuraNavigation extends StatelessWidget {
++  const AuraNavigation({super.key, required this.selected});
++  final int selected;
++
++  @override
++  Widget build(BuildContext context) => DecoratedBox(
++    decoration: const BoxDecoration(
++      border: Border(top: BorderSide(color: AuraColors.surfaceBorder)),
++    ),
++    child: NavigationBar(
++      backgroundColor: AuraColors.background,
++      indicatorColor: AuraColors.positive,
++      selectedIndex: selected,
++      height: 76,
++      onDestinationSelected: (index) {
++        if (index == selected) return;
++        context.go(
++          [AuraRoutes.home, AuraRoutes.friends, AuraRoutes.settings][index],
++        );
++      },
++      destinations: const [
++        NavigationDestination(
++          icon: Icon(Icons.blur_on_rounded),
++          selectedIcon: Icon(
++            Icons.blur_on_rounded,
++            color: AuraColors.background,
++          ),
++          label: 'your aura',
++        ),
++        NavigationDestination(
++          icon: Icon(Icons.people_outline_rounded),
++          selectedIcon: Icon(
++            Icons.people_rounded,
++            color: AuraColors.background,
++          ),
++          label: 'your people',
++        ),
++        NavigationDestination(
++          icon: Icon(Icons.tune_rounded),
++          selectedIcon: Icon(Icons.tune_rounded, color: AuraColors.background),
++          label: 'settings',
++        ),
++      ],
++    ),
++  );
++}
++
++class AuraIntro extends StatelessWidget {
++  const AuraIntro({
++    super.key,
++    required this.label,
++    required this.title,
++    required this.body,
++  });
++  final String label;
++  final String title;
++  final String body;
++  @override
++  Widget build(BuildContext context) => Padding(
++    padding: const EdgeInsets.only(bottom: 24),
++    child: Column(
++      crossAxisAlignment: CrossAxisAlignment.start,
++      children: [
++        AuraEyebrow(label),
++        const SizedBox(height: 10),
++        Text(title, style: AuraType.headingLarge),
++        const SizedBox(height: 8),
++        Text(body, style: AuraType.body.copyWith(color: AuraColors.textMuted)),
++      ],
++    ),
++  );
++}
++
++/// Drill-in routes can also be opened directly by an invite or restored session.
++class AuraBackButton extends StatelessWidget {
++  const AuraBackButton({super.key});
++  @override
++  Widget build(BuildContext context) => IconButton(
++    tooltip: 'go back',
++    icon: const Icon(Icons.arrow_back_rounded),
++    onPressed: () {
++      if (Navigator.of(context).canPop()) {
++        Navigator.of(context).pop();
++      } else {
++        GoRouter.maybeOf(context)?.go(AuraRoutes.home);
++      }
++    },
++  );
++}
