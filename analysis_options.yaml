@@ -1,0 +1,62 @@
+# Lint rules for Aura.
+#
+# The defaults from flutter_lints are the baseline; everything added below is
+# there for a specific reason, noted inline. `flutter analyze` must be clean
+# before any slice is considered done — warnings are treated as failures.
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+
+  language:
+    # Refuse implicit downcasts from dynamic. Firestore hands back
+    # Map<String, dynamic>, and without this a wrong field type sails through
+    # analysis and crashes at runtime on a real user's phone instead.
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+
+  errors:
+    # These are real bugs, not style. Failing the build on them is the point.
+    unawaited_futures: error
+    cancel_subscriptions: error
+    close_sinks: error
+    use_build_context_synchronously: error
+    # Leftover code is a warning by default and easy to ignore; make it visible.
+    unused_import: error
+    unused_local_variable: error
+    dead_code: error
+
+linter:
+  rules:
+    # Performance — a const widget is not rebuilt. Matters most in the feed,
+    # which scrolls a lot on cheap phones.
+    - prefer_const_constructors
+    - prefer_const_constructors_in_immutables
+    - prefer_const_declarations
+    - prefer_const_literals_to_create_immutables
+
+    # Resource cleanup. Aura holds Firestore listeners and animation
+    # controllers; a leak here shows up as battery drain, not as a crash.
+    - cancel_subscriptions
+    - close_sinks
+
+    # Async correctness.
+    - unawaited_futures
+    - avoid_slow_async_io
+    - discarded_futures
+
+    # `print` blocks the platform thread and leaks data into logcat, where it
+    # can be read off the device. Nothing in this app should print.
+    - avoid_print
+
+    # Clarity.
+    - always_declare_return_types
+    - prefer_final_locals
+    - require_trailing_commas
+    - avoid_dynamic_calls
+    - unnecessary_parenthesis
+    - sort_child_properties_last

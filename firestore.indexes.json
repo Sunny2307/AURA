@@ -1,0 +1,56 @@
+{
+  "comment": [
+    "Composite indexes for Aura.",
+    "",
+    "Slice 1 needed none: every query it made was a single document lookup by id",
+    "(users/{uid}, usernames/{name}), and Firestore indexes single fields itself.",
+    "",
+    "Slice 2 adds the first real ones. The friends screen runs two live queries",
+    "against `friendships`, both filtered by membership and status and ordered",
+    "newest-first. `array-contains` plus an equality plus an orderBy on a third",
+    "field is exactly the shape Firestore cannot serve from automatic indexes.",
+    "",
+    "  1. accepted friendships for one person   — the friend list",
+    "  2. pending friendships for one person    — incoming + outgoing requests,",
+    "     separated client-side on `requestedBy` rather than by a third query,",
+    "     because one listener over a handful of pending documents is cheaper",
+    "     than two, and the split is a comparison the client can already make.",
+    "",
+    "Both share the same field shape, so they are one index, not two.",
+    "",
+    "fieldOverrides turns OFF the automatic single-field indexes on the two age",
+    "fields. Nothing can query them today — users/{uid} is self-read-only, so a",
+    "collection query fails on the first document it would return. The override",
+    "exists so that stays true by construction: the day someone widens `list` on",
+    "`users` for a leaderboard, `where('isMinor','==',true)` must not be servable",
+    "for free. Added after the slice 2 security review flagged it as latent.",
+    "",
+    "Still expected later:",
+    "  - users:        appearOnLeaderboards ASC, score DESC  (slice 6 leaderboard)",
+    "  - feed:         createdAt DESC                        (slice 5, subcollection)",
+    "  - transactions: recipientId ASC, createdAt DESC       (slice 3)"
+  ],
+  "indexes": [
+    {
+      "collectionGroup": "friendships",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "members", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "users",
+      "fieldPath": "birthYear",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "users",
+      "fieldPath": "isMinor",
+      "indexes": []
+    }
+  ]
+}

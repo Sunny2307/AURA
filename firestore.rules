@@ -1,0 +1,651 @@
+rules_version = '2';
+
+// Aura security rules.
+//
+// The threat model is not a stranger poking at the API — it is a *user of the
+// app* who has decompiled it, or who is driving the Firestore REST API with
+// their own valid ID token. Every rule below assumes the caller is fully
+// authenticated as themselves and is lying about everything else.
+//
+// The three rules the product cannot survive without (plan §"Three rules that
+// must not be broken"):
+//
+//   1. A client never raises its own `score`. On create it is pinned to exactly
+//      1000; after that the field is immutable to clients and only a Cloud
+//      Function (which bypasses these rules) may move it.
+//   2. `usernames/{username}` is claimable once and never reassigned, which is
+//      the only thing making usernames unique — Firestore has no unique index.
+//   3. `isMinor` and `birthYear` are immutable after create. A 15-year-old must
+//      not be able to edit away their own safety settings.
+//
+// A note on what is *absent*: there is no `allow read: if true` anywhere, and no
+// collection falls through to a permissive default. Anything not named here is
+// denied, which is the behaviour we want as later slices add collections — a new
+// collection is inaccessible until someone writes a rule for it on purpose.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------------
+    // Helpers
+    // ---------------------------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Fields the client is allowed to send on the initial user create. Listed
+    // exhaustively rather than checked one by one, so a future field added to
+    // the model cannot arrive from a client until this list is updated
+    // deliberately. `createdAt` is included because the client sends
+    // `FieldValue.serverTimestamp()` — the value is the server's, not theirs.
+    function createFieldsAreExactly(data) {
+      return data.keys().hasOnly([
+        'username', 'photoUrl', 'score',
+        'birthYear', 'isMinor', 'privacy', 'createdAt'
+      ]) && data.keys().hasAll([
+        'username', 'score', 'birthYear', 'isMinor', 'privacy'
+      ]);
+    }
+
+    // Mirrors UsernameRules in the Dart client. Duplicated deliberately: the
+    // client copy exists to give instant feedback while typing, this copy is the
+    // one that is actually enforced. If they disagree, this one wins and the user
+    // sees a failed write — which is the right failure direction.
+    //
+    // Length and shape only. The reserved-name list is not repeated here; it is
+    // long, it changes, and a reserved name slipping through is a moderation
+    // problem rather than a security hole. Uniqueness is what these rules
+    // guarantee, via the usernames collection below.
+    function isWellFormedUsername(name) {
+      return name is string
+          && name.size() >= 3
+          && name.size() <= 20
+          && name.matches('^[a-z][a-z0-9_]*$')
+          && !name.matches('.*__.*')
+          && !name.matches('.*_$');
+    }
+
+    function isPlausibleBirthYear(year) {
+      // Deliberately loose — the real age gate is
+      // `evaluateAgeGate` in the client plus the isMinor consistency check
+      // below. Rules have no access to a wall clock beyond request.time, which
+      // is fine for a sanity window but not for the conservative arithmetic.
+      return year is int
+          && year > request.time.year() - 120
+          && year <= request.time.year();
+    }
+
+    // The minimum age is 15, computed conservatively as `year - birthYear - 1`
+    // so someone born in 2011 is treated as 14 in 2026 (see AuraAgeRules).
+    // Enforcing it here means a modified client cannot create an under-age
+    // account by skipping the gate screen.
+    function passesAgeGate(birthYear) {
+      return request.time.year() - birthYear - 1 >= 15;
+    }
+
+    // `isMinor` must agree with the birth year the account claims. Without this,
+    // a client could send `birthYear: 2009, isMinor: false` and hand itself
+    // adult point caps and public leaderboards.
+    function isMinorIsConsistent(birthYear, isMinor) {
+      return isMinor == (request.time.year() - birthYear - 1 < 18);
+    }
+
+    function isValidPrivacy(privacy) {
+      return privacy.keys().hasOnly(['whoCanSendAura', 'appearOnLeaderboards'])
+          && privacy.whoCanSendAura in ['everyone', 'friends', 'nobody']
+          && privacy.appearOnLeaderboards is bool;
+    }
+
+    // A minor may never appear on public leaderboards (spec §10). Enforced on
+    // create *and* on every update, so it cannot be switched on later from a
+    // settings screen or a raw API call.
+    function leaderboardsAllowed(isMinor, privacy) {
+      return !isMinor || privacy.appearOnLeaderboards == false;
+    }
+
+    // Photo URLs must be absent. Not "a string" — absent.
+    //
+    // This was `photoUrl is string` until the slice 2 security review, and that
+    // was a real hole rather than a loose end. `publicProfiles/{uid}` is readable
+    // by any signed-in user, and the friends screen renders every *pending*
+    // request's photo automatically, before any accept. So an arbitrary URL here
+    // is a zero-interaction beacon: set `photoUrl` to a server you control, send
+    // a friend request to a handle, and the target's device fetches it the moment
+    // they open the app — handing over their IP, rough location, user agent and
+    // the exact time they opened it. Aimed at a user base that includes
+    // 15-year-olds, delivered by an unsolicited request.
+    //
+    // Cloud Storage is not provisioned on the Spark plan, so nobody can legally
+    // have a photo anyway and "none" costs the product nothing today. When
+    // Storage arrives, the replacement is a prefix match on the bucket, NOT a
+    // return to `is string`:
+    //
+    //   value is string
+    //     && value.size() < 512
+    //     && value.matches('^https://firebasestorage\\.googleapis\\.com/v0/b/aura-d68c3\\..*')
+    function isAllowedPhotoUrl(value) {
+      return value == null;
+    }
+
+    // Account creation is one atomic operation. As of slice 2 it spans *three*
+    // documents — the private profile, the unique handle claim, and the public
+    // discovery profile — and each one requires the other two to exist after the
+    // commit. `getAfter` reads the post-commit state, so no single piece can be
+    // created on its own by a modified client, while the legitimate Firestore
+    // transaction that writes all three remains valid.
+    //
+    // Why all three and not just two: if the public profile could be created
+    // separately, someone could publish a `publicProfiles/{uid}` claiming a
+    // handle they do not own, and every search for that handle would surface
+    // them. Tying it to `users/{uid}.username` makes that impossible.
+    function hasMatchingUsernameClaim(uid, username) {
+      let claimPath = /databases/$(database)/documents/usernames/$(username);
+      return existsAfter(claimPath)
+          && getAfter(claimPath).data.uid == uid;
+    }
+
+    function hasMatchingUser(uid, username) {
+      let userPath = /databases/$(database)/documents/users/$(uid);
+      return existsAfter(userPath)
+          && getAfter(userPath).data.username == username;
+    }
+
+    // Whether a uid belongs to a *finished* Aura account.
+    //
+    // A Firebase Auth account and an Aura account are two different things.
+    // Anyone can hit the Auth REST signup endpoint and hold a valid ID token
+    // with no profile, no handle, and — the part that matters — no age gate ever
+    // run, because the gate lives on the `users/{uid}` create path such a caller
+    // never took.
+    //
+    // Every collection a client can write to should require this. It started as
+    // a friendship-only check; the slice 9 review found that blocks and reports
+    // had no equivalent, which left a ghost token able to write unbounded
+    // documents into a *shared, project-wide* daily quota — enough to deny
+    // service to every real user for the rest of the day, while burying the
+    // console-only report queue under fabricated rows.
+    function accountExists(uid) {
+      return exists(/databases/$(database)/documents/publicProfiles/$(uid));
+    }
+
+    function hasMatchingPublicProfile(uid, username) {
+      let publicPath = /databases/$(database)/documents/publicProfiles/$(uid);
+      return existsAfter(publicPath)
+          && getAfter(publicPath).data.username == username;
+    }
+
+    // ---------------------------------------------------------------------
+    // users/{uid}
+    // ---------------------------------------------------------------------
+
+    match /users/{uid} {
+      // This document includes private age and safety state, so it is exposed
+      // only to its owner — including to friends. Discovery reads
+      // `publicProfiles/{uid}` instead, which carries only the handle and photo.
+      //
+      // Note what this costs, honestly: friends cannot see each other's `score`
+      // either, because the score lives here and cannot be copied into a
+      // client-written public document without letting a tampered client
+      // publish any number it likes. Friend scores need a server. Slice 6.
+      allow read: if isSelf(uid);
+
+      allow create: if isSelf(uid)
+                    && createFieldsAreExactly(request.resource.data)
+                    // The line that stops a tampered client starting rich.
+                    && request.resource.data.score == 1000
+                    && isWellFormedUsername(request.resource.data.username)
+                    && isPlausibleBirthYear(request.resource.data.birthYear)
+                    && passesAgeGate(request.resource.data.birthYear)
+                    && request.resource.data.isMinor is bool
+                    && isMinorIsConsistent(
+                         request.resource.data.birthYear,
+                         request.resource.data.isMinor
+                       )
+                    && isValidPrivacy(request.resource.data.privacy)
+                    && leaderboardsAllowed(
+                         request.resource.data.isMinor,
+                         request.resource.data.privacy
+                       )
+                    && hasMatchingUsernameClaim(
+                         uid,
+                         request.resource.data.username
+                       )
+                    && hasMatchingPublicProfile(
+                         uid,
+                         request.resource.data.username
+                       )
+                    && isAllowedPhotoUrl(request.resource.data.photoUrl)
+                    && request.resource.data.createdAt == request.time;
+
+      // Updates are narrow on purpose. The client owns exactly two things about
+      // itself: its photo and its privacy toggles.
+      //
+      // `score` and `username` are absent from the writable set:
+      //   * score — trusted Node.js API only, or the game is meaningless.
+      //   * username — changing it would orphan the usernames/{name} claim and
+      //     break every historical mention. Username changes, if they ever ship,
+      //     need a function that moves the claim atomically.
+      allow update: if isSelf(uid)
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys()
+                         .hasOnly(['photoUrl', 'privacy'])
+                    && (!('privacy' in request.resource.data.diff(resource.data).affectedKeys())
+                        || (isValidPrivacy(request.resource.data.privacy)
+                            && leaderboardsAllowed(
+                                 resource.data.isMinor,
+                                 request.resource.data.privacy
+                               )))
+                    && isAllowedPhotoUrl(request.resource.data.photoUrl);
+
+      // Account deletion, added in slice 9.
+      //
+      // This was `if false` with a comment saying deletion was a Cloud
+      // Function's job. On the Spark plan that function does not exist and will
+      // not for the beta, and "no way to leave" is not an acceptable state for
+      // an app with 15-year-olds in it. So the client does it, under the same
+      // atomicity discipline the create uses — `existsAfter` run backwards.
+      //
+      // The private profile and the public profile must disappear together. A
+      // public profile outliving its account would be a searchable handle
+      // belonging to nobody; a user document outliving its public profile would
+      // be invisible but still real.
+      //
+      // `usernames/{name}` deliberately does NOT go. See its rule for why.
+      allow delete: if isSelf(uid)
+                    && !existsAfter(
+                         /databases/$(database)/documents/publicProfiles/$(uid)
+                       );
+    }
+
+    // ---------------------------------------------------------------------
+    // usernames/{username}
+    // ---------------------------------------------------------------------
+
+    match /usernames/{username} {
+      // Readable while signed out, and this is the one deliberate exception to
+      // "authenticate first". The availability check on the signup screen runs
+      // *before* the account exists, so requiring auth would make it impossible
+      // to tell someone their handle is taken until after they had signed up.
+      //
+      // What leaks: whether a given handle exists, and the uid behind it. Both
+      // are already visible to anyone who can see a profile, and the document
+      // holds nothing else — no email, no score, no age.
+      allow get: if true;
+      allow list: if false;
+
+      // Claimable once. `create` cannot overwrite an existing document, so the
+      // absence of `update` is what makes a claim permanent — a second person
+      // claiming the same handle gets a failed create, and the client-side
+      // transaction that wraps this turns that into "taken, pick another".
+      allow create: if isSignedIn()
+                    && isWellFormedUsername(username)
+                    && request.resource.data.keys().hasOnly(['uid'])
+                    && request.resource.data.uid == request.auth.uid
+                    && hasMatchingUser(request.auth.uid, username);
+
+      // Never reassigned, never released — and this survives account deletion
+      // on purpose.
+      //
+      // When someone deletes their account in slice 9, everything personal goes:
+      // the profile, the public profile, every friendship. This document stays
+      // behind as a tombstone holding nothing but a uid that no longer resolves.
+      // That is the point. Freeing the handle would let someone squat a churned
+      // friend's name the moment they left, and every old mention of `@sam`
+      // would silently start pointing at a different person.
+      //
+      // The cost is honest and is stated in the deletion copy: your data is
+      // gone, your handle is never reissued.
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------------------
+    // publicProfiles/{uid}
+    // ---------------------------------------------------------------------
+    //
+    // The minimal shape discovery is allowed to see: a handle and a photo.
+    //
+    // `usernames/{name}` already maps handle → uid and is readable, but it is
+    // permanently immutable by design, so a changed photo could never be
+    // reflected there. This collection is the mutable half.
+    //
+    // What is deliberately NOT here: `score`, `birthYear`, `isMinor`, privacy.
+    // Everything in this document is written by the client, so anything stored
+    // here is something a tampered client can lie about. A handle cannot be
+    // lied about — the create rule ties it to `users/{uid}.username`, which is
+    // itself tied to a permanent `usernames/{name}` claim. A score could be,
+    // which is exactly why it stays on `users/{uid}`.
+
+    match /publicProfiles/{uid} {
+      // Any signed-in user may read any public profile. Discovery is by exact
+      // handle, so this is only reachable by someone who already knows the
+      // uid or the handle; `list` stays closed so nobody can enumerate users.
+      allow get: if isSignedIn();
+      allow list: if false;
+
+      allow create: if isSelf(uid)
+                    && request.resource.data.keys()
+                         .hasOnly(['username', 'photoUrl'])
+                    && request.resource.data.keys().hasAll(['username'])
+                    && isWellFormedUsername(request.resource.data.username)
+                    // The anti-impersonation line. Without it, anyone could
+                    // publish a public profile under their own uid claiming
+                    // someone else's handle.
+                    && hasMatchingUser(uid, request.resource.data.username)
+                    && isAllowedPhotoUrl(request.resource.data.photoUrl);
+
+      // Only the photo moves. `username` is immutable for the same reason it is
+      // immutable on `users/{uid}`: changing it would orphan the handle claim.
+      allow update: if isSelf(uid)
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['photoUrl'])
+                    && isAllowedPhotoUrl(request.resource.data.photoUrl);
+
+      // The other half of account deletion. Mirrors the `users/{uid}` delete
+      // rule: this document may go only if the private profile goes with it, so
+      // neither can be removed on its own.
+      allow delete: if isSelf(uid)
+                    && !existsAfter(
+                         /databases/$(database)/documents/users/$(uid)
+                       );
+    }
+
+    // ---------------------------------------------------------------------
+    // friendships/{pairId}
+    // ---------------------------------------------------------------------
+    //
+    // One friendship is ONE document, not a pair of mirrored subcollection
+    // entries. The document id is `<lowUid>_<highUid>` with the two uids sorted,
+    // which is the same trick `usernames` uses: the id itself is the uniqueness
+    // guarantee. Two people requesting each other at the same instant collide on
+    // one id instead of creating two half-friendships that disagree.
+    //
+    // The alternative — `users/{uid}/friends/{friendUid}` on both sides, which
+    // the MVP plan's data model specifies — was rejected because accepting a
+    // request would mean writing into another user's document tree, and because
+    // two documents that must agree eventually will not.
+    //
+    // Nothing here updates a stored friend count. There is no such field any
+    // more; the count is derived from this collection.
+
+    match /friendships/{pairId} {
+      // Sorted and distinct. `members[0] < members[1]` gives both at once, and
+      // also makes a self-friendship impossible — [uid, uid] fails the compare.
+      function membersAreWellFormed(members) {
+        return members is list
+            && members.size() == 2
+            && members[0] is string
+            && members[1] is string
+            && members[0] < members[1];
+      }
+
+      // The id must be derivable from the contents. Without this, a client could
+      // write a correct-looking body under an arbitrary id and then hold a
+      // second, competing friendship document for the same pair.
+      function pairIdMatches(members) {
+        return pairId == members[0] + '_' + members[1];
+      }
+
+      function otherMember(members) {
+        return members[0] == request.auth.uid ? members[1] : members[0];
+      }
+
+      // You may only request someone who actually exists. Stops a client
+      // seeding friendship documents against uids that were never accounts.
+      function targetExists(members) {
+        return accountExists(otherMember(members));
+      }
+
+      // ...and you must exist yourself.
+      //
+      // Added after the slice 2 security review found this gap. A Firebase Auth
+      // account and a *finished* Aura account are two different things: anyone
+      // can hit the Auth REST signup endpoint and hold a valid ID token with no
+      // profile, no handle, and crucially no recorded age — the age gate lives
+      // on the `users/{uid}` create path, which such a caller never ran.
+      //
+      // Without this check that ghost could send friend requests. On the
+      // recipient's screen the request counts toward "waiting on you" but its
+      // row resolves to no public profile and renders as nothing, so it is
+      // *invisible and impossible to dismiss*. Unlimited unreportable spam
+      // against any handle, from throwaway tokens, with no age gate on the
+      // sender.
+      function requesterExists() {
+        return accountExists(request.auth.uid);
+      }
+
+      // Respects the target's "who can send me aura" setting.
+      //
+      // Reaching into `users/{other}` is safe here and is not a read grant:
+      // `get()` inside a rule bypasses the read rules and its result never
+      // reaches the client. Only the boolean outcome does.
+      //
+      // Using a send-aura setting to gate *friend requests* is a slight stretch
+      // of its name, and it is deliberate: `nobody` is unambiguous, it is the
+      // only privacy lever that exists today, and someone who has set it has
+      // clearly asked to be left alone. The default is `friends`, so ordinary
+      // accounts are unaffected. A real block list is Slice 9.
+      function targetAcceptsRequests(members) {
+        let targetPath =
+          /databases/$(database)/documents/users/$(otherMember(members));
+        return !exists(targetPath)
+            || get(targetPath).data.privacy.whoCanSendAura != 'nobody';
+      }
+
+      // Blocking, checked in BOTH directions.
+      //
+      // Two directions rather than one because a block is a statement about a
+      // relationship, not a one-way filter. If only "has the target blocked me"
+      // were checked, a blocker would still be able to re-request the person
+      // they blocked — which means the act of blocking someone would not
+      // actually end the relationship, only half of it.
+      //
+      // This read leaks nothing. `exists()` inside a rule bypasses the read
+      // rules, and `users/{uid}/blocks` is owner-readable only, so the blocked
+      // person can never see the block document. All that reaches a client is a
+      // denied write, which is also what a network failure looks like.
+      function neitherHasBlockedTheOther(members) {
+        let them = otherMember(members);
+        return !exists(
+                 /databases/$(database)/documents/users/$(them)/blocks/$(request.auth.uid)
+               )
+            && !exists(
+                 /databases/$(database)/documents/users/$(request.auth.uid)/blocks/$(them)
+               );
+      }
+
+      // Both members, and only them. This also covers the friend-list query:
+      // `where('members', 'array-contains', uid)` is the only shape of list
+      // query that can satisfy this rule, which is the point.
+      allow read: if isSignedIn()
+                  && request.auth.uid in resource.data.members;
+
+      allow create: if isSignedIn()
+                    && request.resource.data.keys().hasOnly([
+                         'members', 'requestedBy', 'status',
+                         'createdAt', 'respondedAt'
+                       ])
+                    && request.resource.data.keys().hasAll([
+                         'members', 'requestedBy', 'status', 'createdAt'
+                       ])
+                    && membersAreWellFormed(request.resource.data.members)
+                    && pairIdMatches(request.resource.data.members)
+                    && request.auth.uid in request.resource.data.members
+                    // You cannot send a request on someone else's behalf.
+                    && request.resource.data.requestedBy == request.auth.uid
+                    // Every friendship starts pending. Nobody creates an
+                    // already-accepted friendship with themselves.
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.createdAt == request.time
+                    && (!('respondedAt' in request.resource.data.keys())
+                        || request.resource.data.respondedAt == null)
+                    && requesterExists()
+                    && targetExists(request.resource.data.members)
+                    && targetAcceptsRequests(request.resource.data.members)
+                    && neitherHasBlockedTheOther(request.resource.data.members);
+
+      // Acceptance, and nothing else. The one transition this allows is
+      // pending → accepted, performed by the member who did NOT send it.
+      //
+      // `requestedBy != request.auth.uid` is the consent rule. Without it the
+      // sender could accept their own request and add themselves to someone's
+      // friend list, which would make the whole request/accept model theatre.
+      allow update: if isSignedIn()
+                    && request.auth.uid in resource.data.members
+                    && request.auth.uid != resource.data.requestedBy
+                    && resource.data.status == 'pending'
+                    && request.resource.data.status == 'accepted'
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['status', 'respondedAt'])
+                    && request.resource.data.respondedAt == request.time
+                    // Defence in depth, added after the slice 9 review. A block
+                    // normally severs the friendship document in the same
+                    // commit, so a legitimate accept can never be affected by
+                    // this line — but a block written on its own over REST, or
+                    // a block racing an accept already in flight, would
+                    // otherwise let someone become a friend of a person who had
+                    // just blocked them.
+                    && neitherHasBlockedTheOther(resource.data.members);
+
+      // Decline, cancel and unfriend are all the same operation: the document
+      // goes away. Either member may do it, at any status. Modelling them
+      // separately would mean a `declined` state that nobody ever reads and
+      // that lets a sender see they were rejected.
+      //
+      // The `resource == null` branch is not a convenience — it is the fix for
+      // a slice 9 review finding that broke the whole safety feature. Blocking
+      // someone writes the block and deletes the friendship in ONE batch, and a
+      // batch is atomic. With only the `resource.data.members` check, deleting a
+      // friendship that does not exist raises a null-value evaluation error,
+      // which denies, which took the block down with it. So block and report
+      // failed against anyone you were not already friends with — exactly the
+      // stranger case the safety menu exists for.
+      //
+      // Membership is derived from the document id in that branch, which is
+      // sound because `pairIdMatches` guarantees the id is the two sorted uids,
+      // and Firebase Auth uids contain no underscores. Critically this is NOT an
+      // existence oracle: a non-member is denied on both branches, so success
+      // and failure reveal nothing about whether the friendship was there.
+      allow delete: if isSignedIn()
+                    && (resource == null
+                          ? request.auth.uid in pairId.split('_')
+                          : request.auth.uid in resource.data.members);
+    }
+
+    // ---------------------------------------------------------------------
+    // users/{uid}/blocks/{blockedUid}
+    // ---------------------------------------------------------------------
+    //
+    // Who you have blocked. A subcollection under the *blocker*, so the
+    // document id is the blocked person's uid and "have I blocked them" is a
+    // document read rather than a query.
+    //
+    // Readable by the owner and nobody else. That single line is what makes
+    // blocking silent: the blocked person has no document to read, no query
+    // that would return one, and no way to tell a block from a dropped
+    // connection. The friendship rule reaches in with `exists()`, which inside
+    // a rule bypasses these read rules and returns only a boolean to the
+    // evaluation — never to a client.
+    //
+    // Note it lives under `users/{uid}` but is NOT covered by that document's
+    // rules: Firestore subcollections do not inherit, which is exactly why the
+    // slice 1 rules file has an explicit "denies writes to a user
+    // subcollection" test. This block is what opens this one path on purpose.
+
+    match /users/{uid}/blocks/{blockedUid} {
+      allow read: if isSelf(uid);
+
+      allow create: if isSelf(uid)
+                    // Blocking yourself is meaningless and would, with the
+                    // two-way check in the friendship rule, make you unable to
+                    // interact with anyone via a self-referential path.
+                    && blockedUid != uid
+                    // A ghost token holds no account and never passed the age
+                    // gate. Without this it could write unbounded block
+                    // documents into the shared project quota.
+                    && accountExists(uid)
+                    && request.resource.data.keys().hasOnly(['createdAt'])
+                    && request.resource.data.createdAt == request.time;
+
+      // No update. A block is present or absent; there is nothing to change,
+      // and an updatable block invites a "soft block" state nobody asked for.
+      allow update: if false;
+
+      // Unblocking.
+      allow delete: if isSelf(uid);
+    }
+
+    // ---------------------------------------------------------------------
+    // reports/{reportId}
+    // ---------------------------------------------------------------------
+    //
+    // Filed, not reviewed. There is no moderation UI in the app and no reviewer
+    // behind it; these are read from the Firebase console.
+    //
+    // `read` is denied to EVERYONE, including the person who filed it. A
+    // readable reports collection is a list of accusations about named people,
+    // and there is no version of this app where a client should hold that.
+
+    match /reports/{reportId} {
+      allow read: if false;
+
+      allow create: if isSignedIn()
+                    // Puts the age gate back in front of the report form, and
+                    // closes the same unbounded-write path as on blocks.
+                    && accountExists(request.auth.uid)
+                    && request.resource.data.keys().hasOnly([
+                         'reporterUid', 'reportedUid', 'reason', 'createdAt'
+                       ])
+                    && request.resource.data.keys().hasAll([
+                         'reporterUid', 'reportedUid', 'reason', 'createdAt'
+                       ])
+                    // You can only report as yourself.
+                    && request.resource.data.reporterUid == request.auth.uid
+                    && request.resource.data.reportedUid is string
+                    && request.resource.data.reportedUid != request.auth.uid
+                    && request.resource.data.reason is string
+                    && request.resource.data.reason.size() > 0
+                    && request.resource.data.reason.size() <= 40
+                    && request.resource.data.createdAt == request.time
+                    // A report must come with its block, in the same commit.
+                    //
+                    // Nothing reviews this queue yet, so the block is the only
+                    // thing that actually protects the reporter today. Coupling
+                    // them in the rules means the UI cannot drift into offering
+                    // a report button that quietly does nothing.
+                    //
+                    // `reportedUid` is deliberately NOT checked for existence:
+                    // a report about an account that has since deleted itself is
+                    // still worth having.
+                    && existsAfter(
+                         /databases/$(database)/documents/users/$(request.auth.uid)/blocks/$(request.resource.data.reportedUid)
+                       );
+
+      // Immutable once filed. A retractable accusation is worse than none.
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Trusted local Node.js API writes these with the Admin SDK. The Admin SDK
+    // bypasses rules; every mobile client, including a tampered one, is denied.
+    match /transactions/{txId} {
+      allow get: if isSignedIn()
+                 && request.auth.uid in [resource.data.senderId, resource.data.recipientId];
+      allow list, create, update, delete: if false;
+    }
+
+    match /users/{uid}/feed/{txId} {
+      allow read: if isSelf(uid);
+      allow write: if false;
+    }
+
+    match /rateLimits/{key} {
+      allow read, write: if false;
+    }
+  }
+}

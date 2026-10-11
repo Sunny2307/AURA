@@ -1,0 +1,17 @@
+{
+  "name": "aura-firestore-rules-tests",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Security-rules tests for Aura. Run against the Firestore emulator; never against the live project.",
+  "type": "module",
+  "scripts": {
+    "test": "npx --yes firebase-tools@13.35.1 emulators:exec --only firestore --project=aura-d68c3 \"node --test rules.test.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.5"
+  }
+}
