@@ -23,6 +23,12 @@ import '../../features/profile/presentation/photo_step.dart';
 import '../../prototype/local_photo_step.dart';
 import '../../prototype/prototype_runtime.dart';
 import '../../shared/widgets/aura_identity.dart';
+import '../../features/feed/presentation/feed_screen.dart';
+import '../../features/leaderboard/presentation/leaderboard_screen.dart';
+import '../../features/profile/presentation/local_profile_screen.dart';
+import '../../features/sharing/presentation/aura_export_screen.dart';
+import '../../features/notifications/presentation/local_activity_screen.dart';
+import '../../features/auth/presentation/local_accounts_screen.dart';
 
 /// Re-exported so every `import 'core/router/app_router.dart'` in the app keeps
 /// resolving [AuraRoutes] unchanged after the split.
@@ -94,8 +100,47 @@ final class AppRouter {
       GoRoute(
         path: AuraRoutes.sendAura,
         redirect: _requireAccount,
-        builder: (context, state) => const SendAuraScreen(),
+        builder: (context, state) =>
+            SendAuraScreen(recipientUid: state.uri.queryParameters['to']),
       ),
+      if (prototypeMode) ...[
+        GoRoute(
+          path: AuraRoutes.feed,
+          redirect: _requireAccount,
+          builder: (_, _) => const FeedScreen(),
+        ),
+        GoRoute(
+          path: AuraRoutes.leaderboard,
+          redirect: _requireAccount,
+          builder: (_, _) => const LeaderboardScreen(),
+        ),
+        GoRoute(
+          path: AuraRoutes.localProfile,
+          redirect: _requireAccount,
+          builder: (_, state) =>
+              LocalProfileScreen(uid: state.pathParameters['uid'] ?? ''),
+        ),
+        GoRoute(
+          path: AuraRoutes.moment,
+          redirect: _requireAccount,
+          builder: (_, state) =>
+              MomentDetailScreen(id: state.pathParameters['id'] ?? ''),
+        ),
+        GoRoute(
+          path: AuraRoutes.exportCard,
+          redirect: _requireAccount,
+          builder: (_, _) => const AuraExportScreen(),
+        ),
+        GoRoute(
+          path: AuraRoutes.activity,
+          redirect: _requireAccount,
+          builder: (_, _) => const LocalActivityScreen(),
+        ),
+        GoRoute(
+          path: AuraRoutes.localAccounts,
+          builder: (_, _) => const LocalAccountsScreen(),
+        ),
+      ],
       GoRoute(
         path: AuraRoutes.photo,
         redirect: _requireAccount,

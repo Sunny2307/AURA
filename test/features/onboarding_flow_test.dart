@@ -38,7 +38,7 @@ void main() {
   /// reduce-motion the orb holds mid-breath, the tree quiesces, and page turns
   /// still animate because they use explicit durations.
   Widget host(Widget child, {bool reduceMotion = false}) {
-    final app = MaterialApp(theme: AuraTheme.dark, home: child);
+    final app = MaterialApp(theme: AuraTheme.light, home: child);
     if (!reduceMotion) return app;
     return MediaQuery(
       data: const MediaQueryData(disableAnimations: true),
@@ -182,7 +182,7 @@ void main() {
           child: MediaQuery(
             data: const MediaQueryData(disableAnimations: true),
             child: MaterialApp.router(
-              theme: AuraTheme.dark,
+              theme: AuraTheme.light,
               routerConfig: router,
             ),
           ),

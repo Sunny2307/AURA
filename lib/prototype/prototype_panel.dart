@@ -174,6 +174,10 @@ class _PrototypePanelState extends ConsumerState<PrototypePanel> {
           children: [
             if (widget.compact && store.currentUid == null) ...[
               FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AuraColors.lime,
+                  foregroundColor: AuraColors.textPrimary,
+                ),
                 onPressed: _busy
                     ? null
                     : () => _run(store.openDemo, AuraRoutes.home),

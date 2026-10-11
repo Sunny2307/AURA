@@ -27,7 +27,7 @@ void main() {
     expect(find.text('@aura_demo'), findsWidgets);
     await tester.scrollUntilVisible(find.text('local prototype'), 300);
     expect(find.text('local prototype'), findsOneWidget);
-    expect(find.text('send aura'), findsOneWidget);
+    expect(find.byKey(const Key('dock-send')), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
     await store.dispose();
@@ -41,7 +41,7 @@ void main() {
     await tester.pumpWidget(prototypeScope(store, const AuraApp()));
     await tester.pump(const Duration(seconds: 3));
     await tester.pump(const Duration(milliseconds: 400));
-    final element = tester.element(find.text('send aura'));
+    final element = tester.element(find.byKey(const Key('dock-send')));
     final container = ProviderScope.containerOf(element);
     expect(container.read(authRepositoryProvider), isA<LocalAuth>());
     expect(container.read(userRepositoryProvider), isA<LocalUsers>());
@@ -67,7 +67,7 @@ void main() {
         );
     expect(store.user('sample-sam')!.score, 1080);
     await store.resume('sample-sam');
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 12; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
     expect(find.text('1080'), findsOneWidget);

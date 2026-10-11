@@ -82,7 +82,7 @@ void main() {
         safetyRepositoryProvider.overrideWithValue(safety),
         accountDeletionServiceProvider.overrideWithValue(deletion),
       ],
-      child: MaterialApp(theme: AuraTheme.dark, home: child),
+      child: MaterialApp(theme: AuraTheme.light, home: child),
     );
   }
 

@@ -9,13 +9,9 @@ import '../../../core/theme/aura_spacing.dart';
 import '../../../features/auth/application/auth_providers.dart';
 import '../../../shared/widgets/aura_identity.dart';
 import '../../../shared/widgets/aura_wordmark.dart';
+import '../../../shared/widgets/aura_logo.dart';
 
-/// Spec §5.1: max 1.5–2s, teal orb pulsing once, wordmark fading in beneath.
-///
-/// The orb's breath cycle is 1500ms (`AuraMotion.orbBreath`), so simply showing
-/// the normal [AuraOrb] for [_minimumDisplay] *is* one pulse — no special-case
-/// animation, and the orb the user sees here is exactly the one they will see on
-/// the home screen.
+/// Approved Aura logo with the wordmark fading in beneath.
 ///
 /// Two things this screen must not do:
 ///
@@ -130,10 +126,10 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const AuraOrbit(score: 1000, size: 220),
+            const AuraLogo(size: 200),
             const SizedBox(height: AuraSpacing.xl),
             if (reduceMotion)
-              const AuraWordmark()
+              const AuraWordmark(showLogo: false)
             else
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: 1),
@@ -150,7 +146,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     ),
                   );
                 },
-                child: const AuraWordmark(),
+                child: const AuraWordmark(showLogo: false),
               ),
             const SizedBox(height: 20),
             const AuraEyebrow('your reputation, remixed'),

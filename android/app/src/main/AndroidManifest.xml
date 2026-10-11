@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
     <!-- Flutter only adds INTERNET to the debug and profile manifests, so a
          release build needs it declared here or every Firebase call fails. -->
     <uses-permission android:name="android.permission.INTERNET"/>

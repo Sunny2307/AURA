@@ -75,7 +75,7 @@ void main() {
         publicProfileRepositoryProvider.overrideWithValue(profiles),
         friendshipRepositoryProvider.overrideWithValue(friendships),
       ],
-      child: MaterialApp(theme: AuraTheme.dark, home: child),
+      child: MaterialApp(theme: AuraTheme.light, home: child),
     );
   }
 

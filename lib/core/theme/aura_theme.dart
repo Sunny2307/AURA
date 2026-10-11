@@ -9,32 +9,39 @@ import 'aura_typography.dart';
 
 /// The single [ThemeData] for the app.
 ///
-/// Aura is **dark only**. There is no light theme and there should not be one:
-/// the entire visual identity in spec section 6.1 is a glowing orb on near-black,
-/// and that effect does not exist on a white background. `themeMode` is pinned to
-/// dark in `AuraApp` so the OS setting cannot override it.
+/// Cream canvas, violet actions and readable dark text on pastel surfaces.
 ///
 /// Note there is no `cardTheme` here. Card styling lives in the `AuraCard`
 /// widget instead — Material's card theming class has been renamed across
 /// Flutter versions, and a widget we own is both more stable and more explicit
 /// about the border + radius the spec asks for.
 abstract final class AuraTheme {
-  static ThemeData get dark {
+  static ThemeData get light {
     const scheme = ColorScheme(
-      brightness: Brightness.dark,
-      primary: AuraColors.positive,
-      onPrimary: Color(0xFF00150E),
-      secondary: AuraColors.gold,
-      onSecondary: Color(0xFF221A00),
+      brightness: Brightness.light,
+      primary: AuraColors.action,
+      onPrimary: AuraColors.onAction,
+      primaryContainer: AuraColors.lilac,
+      onPrimaryContainer: AuraColors.textPrimary,
+      secondary: AuraColors.action,
+      onSecondary: AuraColors.onAction,
+      secondaryContainer: AuraColors.lilac,
+      onSecondaryContainer: AuraColors.textPrimary,
       error: AuraColors.negative,
-      onError: Color(0xFF2B0A05),
+      onError: Colors.white,
+      errorContainer: AuraColors.peach,
+      onErrorContainer: AuraColors.negative,
       surface: AuraColors.surface,
       onSurface: AuraColors.textPrimary,
+      onSurfaceVariant: AuraColors.textMuted,
+      outline: AuraColors.controlBorder,
+      outlineVariant: AuraColors.surfaceBorder,
+      surfaceTint: Colors.transparent,
     );
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark,
+      brightness: Brightness.light,
       colorScheme: scheme,
       scaffoldBackgroundColor: AuraColors.background,
       canvasColor: AuraColors.background,
@@ -52,15 +59,15 @@ abstract final class AuraTheme {
         centerTitle: false,
         titleTextStyle: AuraType.headingMedium,
         iconTheme: const IconThemeData(color: AuraColors.textPrimary),
-        systemOverlayStyle: SystemUiOverlayStyle.light,
+        systemOverlayStyle: SystemUiOverlayStyle.dark,
       ),
 
       // Spec 6.6: buttons are fully rounded pills.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AuraColors.positive,
+          backgroundColor: AuraColors.action,
           foregroundColor: scheme.onPrimary,
-          disabledBackgroundColor: AuraColors.neutral,
+          disabledBackgroundColor: AuraColors.surfaceRaised,
           disabledForegroundColor: AuraColors.textMuted,
           minimumSize: const Size(0, 56),
           padding: const EdgeInsets.symmetric(horizontal: AuraSpacing.xl),
@@ -83,7 +90,7 @@ abstract final class AuraTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AuraColors.positive,
+          foregroundColor: AuraColors.action,
           minimumSize: const Size(0, AuraTouch.minTarget),
           textStyle: AuraType.label,
         ),
@@ -108,7 +115,7 @@ abstract final class AuraTheme {
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: AuraRadius.inputAll,
-          borderSide: BorderSide(color: AuraColors.positive, width: 1.5),
+          borderSide: BorderSide(color: AuraColors.action, width: 1.5),
         ),
         errorBorder: const OutlineInputBorder(
           borderRadius: AuraRadius.inputAll,
@@ -149,7 +156,8 @@ abstract final class AuraTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: AuraColors.surface,
-        selectedColor: AuraColors.positive,
+        selectedColor: AuraColors.action,
+        checkmarkColor: AuraColors.onAction,
         labelStyle: AuraType.bodyStrong,
         secondaryLabelStyle: AuraType.bodyStrong.copyWith(
           color: scheme.onPrimary,
@@ -158,15 +166,34 @@ abstract final class AuraTheme {
         shape: const RoundedRectangleBorder(borderRadius: AuraRadius.inputAll),
         padding: const EdgeInsets.all(8),
       ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: const WidgetStatePropertyAll(AuraColors.textPrimary),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? AuraColors.lilac
+                : AuraColors.surface,
+          ),
+          side: const WidgetStatePropertyAll(
+            BorderSide(color: AuraColors.controlBorder),
+          ),
+        ),
+      ),
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AuraColors.positive,
-        foregroundColor: Color(0xFF00150E),
+        backgroundColor: AuraColors.action,
+        foregroundColor: AuraColors.onAction,
         elevation: 0,
       ),
 
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AuraColors.positive,
+        color: AuraColors.action,
         linearTrackColor: AuraColors.surface,
+      ),
+      sliderTheme: const SliderThemeData(
+        activeTrackColor: AuraColors.action,
+        inactiveTrackColor: AuraColors.controlBorder,
+        thumbColor: AuraColors.action,
+        overlayColor: Color(0x225842B5),
       ),
 
       // Keep each platform's back gesture and transition behavior.

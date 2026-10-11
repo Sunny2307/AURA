@@ -94,18 +94,23 @@ class _Avatar extends StatelessWidget {
     // Local prototype photos are saved on the device. Profiles without a
     // selected photo use the initial as their avatar.
     if (profile.photoUrl == null) {
+      final fill = [
+        AuraColors.lilac,
+        AuraColors.peach,
+        AuraColors.lime,
+      ][profile.username.codeUnits.fold<int>(0, (sum, unit) => sum + unit) % 3];
       return Container(
         width: size,
         height: size,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: AuraColors.positive.withValues(alpha: 0.12),
-          border: Border.all(color: AuraColors.positive.withValues(alpha: 0.3)),
+          color: fill,
+          border: Border.all(color: AuraColors.surfaceBorder),
         ),
         child: Text(
           profile.username.isEmpty ? '?' : profile.username[0].toUpperCase(),
-          style: AuraType.headingMedium.copyWith(color: AuraColors.positive),
+          style: AuraType.headingMedium,
         ),
       );
     }

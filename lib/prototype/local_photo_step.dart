@@ -55,7 +55,7 @@ class _LocalPhotoStepState extends ConsumerState<LocalPhotoStep> {
     );
   }
 
-  Future<void> _pick() async {
+  Future<void> _pick([ImageSource source = ImageSource.gallery]) async {
     if (_busy) return;
     setState(() {
       _busy = true;
@@ -63,7 +63,7 @@ class _LocalPhotoStepState extends ConsumerState<LocalPhotoStep> {
     });
     try {
       final picked = await ImagePicker().pickImage(
-        source: ImageSource.gallery,
+        source: source,
         maxWidth: 1024,
         maxHeight: 1024,
         imageQuality: 85,
@@ -105,9 +105,14 @@ class _LocalPhotoStepState extends ConsumerState<LocalPhotoStep> {
         Center(child: Text(account.handle)),
         const SizedBox(height: AuraSpacing.xl),
         FilledButton.icon(
-          onPressed: _busy ? null : _pick,
+          onPressed: _busy ? null : () => unawaited(_pick()),
           icon: const Icon(Icons.photo_library_outlined),
           label: Text(_busy ? 'saving…' : 'choose a photo'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _busy ? null : () => unawaited(_pick(ImageSource.camera)),
+          icon: const Icon(Icons.camera_alt_outlined),
+          label: const Text('take a photo'),
         ),
         if (_error != null)
           Text(

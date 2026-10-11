@@ -49,8 +49,8 @@ void main() {
       MediaQuery(
         data: const MediaQueryData(disableAnimations: true),
         child: MaterialApp(
-          theme: AuraTheme.dark,
-          themeMode: ThemeMode.dark,
+          theme: AuraTheme.light,
+          themeMode: ThemeMode.light,
           debugShowCheckedModeBanner: false,
           home: const DesignCheckScreen(),
         ),

@@ -87,6 +87,7 @@ class ProfilePreviewScreen extends ConsumerWidget {
                 ),
                 AuraCard(
                   large: true,
+                  color: AuraColors.lilac,
                   child: Column(
                     children: [
                       const AuraEyebrow('aura identity'),
@@ -94,7 +95,7 @@ class ProfilePreviewScreen extends ConsumerWidget {
                       const Icon(
                         Icons.fingerprint_rounded,
                         size: 80,
-                        color: AuraColors.positive,
+                        color: AuraColors.action,
                       ),
                       const SizedBox(height: 24),
                       FriendTile(

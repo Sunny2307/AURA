@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/aura_colors.dart';
 import '../../core/theme/aura_typography.dart';
+import 'aura_logo.dart';
 
 /// The brand wordmark: `aura`, lowercase, tight tracking.
 ///
-/// Exists as a widget rather than a `Text` in three places because it appears on
-/// the splash, in onboarding, and as the watermark on exported share cards
-/// (§5.9) — and the watermark is the growth engine, so the brand must be
-/// pixel-identical everywhere it lands on someone's Instagram story.
+/// Shared by the splash, onboarding and home header with the approved logo.
 ///
 /// Lowercase is not a style preference here: spec §7.1 sets lowercase UI copy as
 /// a voice rule, and the wordmark is the loudest instance of it.
@@ -17,7 +15,8 @@ class AuraWordmark extends StatelessWidget {
     super.key,
     this.size = 40,
     this.color = AuraColors.textPrimary,
-    this.showDot = true,
+    this.showDot = false,
+    this.showLogo = true,
   });
 
   /// Font size in logical pixels. The dot scales with it.
@@ -25,9 +24,9 @@ class AuraWordmark extends StatelessWidget {
 
   final Color color;
 
-  /// The teal dot after the word. Off for the share-card watermark, where a
-  /// coloured mark competes with the user's own score.
+  /// Optional punctuation for older wordmark callers.
   final bool showDot;
+  final bool showLogo;
 
   @override
   Widget build(BuildContext context) {
@@ -38,11 +37,20 @@ class AuraWordmark extends StatelessWidget {
       excludeSemantics: true,
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            'aura',
-            style: AuraType.wordmark(size: size, color: color),
+          if (showLogo) ...[
+            AuraLogo(size: size * 1.15),
+            SizedBox(width: size * 0.25),
+          ],
+          Flexible(
+            fit: FlexFit.loose,
+            child: Text(
+              'aura',
+              style: AuraType.wordmark(size: size, color: color),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           if (showDot) ...[
             SizedBox(width: size * 0.06),
@@ -54,7 +62,7 @@ class AuraWordmark extends StatelessWidget {
                 width: size * 0.14,
                 height: size * 0.14,
                 decoration: const BoxDecoration(
-                  color: AuraColors.positive,
+                  color: AuraColors.action,
                   shape: BoxShape.circle,
                 ),
               ),

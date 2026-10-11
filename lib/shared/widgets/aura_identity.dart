@@ -7,10 +7,11 @@ import '../../core/router/aura_routes.dart';
 import '../../core/theme/aura_colors.dart';
 import '../../core/theme/aura_typography.dart';
 import 'aura_orb.dart';
+import 'aura_dock_icon.dart';
 
 /// Small editorial label used to separate content without another heavy card.
 class AuraEyebrow extends StatelessWidget {
-  const AuraEyebrow(this.text, {super.key, this.color = AuraColors.positive});
+  const AuraEyebrow(this.text, {super.key, this.color = AuraColors.action});
   final String text;
   final Color color;
 
@@ -52,7 +53,7 @@ class _OrbitPainter extends CustomPainter {
     final center = size.center(Offset.zero);
     final radius = size.shortestSide * 0.43;
     final line = Paint()
-      ..color = AuraColors.positive.withValues(alpha: 0.24)
+      ..color = AuraColors.action.withValues(alpha: 0.28)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     canvas.drawCircle(center, radius, line);
@@ -68,7 +69,7 @@ class _OrbitPainter extends CustomPainter {
       line,
     );
     canvas.restore();
-    final dot = Paint()..color = AuraColors.positive;
+    final dot = Paint()..color = AuraColors.action;
     canvas.drawCircle(center + Offset(radius * 0.71, -radius * 0.71), 4, dot);
     canvas.drawCircle(center + Offset(-radius * 0.94, radius * 0.34), 2.5, dot);
   }
@@ -79,48 +80,163 @@ class _OrbitPainter extends CustomPainter {
 
 /// Existing top-level routes, exposed together without adding placeholder tabs.
 class AuraNavigation extends StatelessWidget {
-  const AuraNavigation({super.key, required this.selected});
+  const AuraNavigation({super.key, required this.selected, this.onSend});
   final int selected;
+  final VoidCallback? onSend;
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(
-      border: Border(top: BorderSide(color: AuraColors.surfaceBorder)),
-    ),
-    child: NavigationBar(
-      backgroundColor: AuraColors.background,
-      indicatorColor: AuraColors.positive,
-      selectedIndex: selected,
-      height: 76,
-      onDestinationSelected: (index) {
-        if (index == selected) return;
+  Widget build(BuildContext context) {
+    void go(int index) {
+      if (index != selected) {
         context.go(
           [AuraRoutes.home, AuraRoutes.friends, AuraRoutes.settings][index],
         );
-      },
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.blur_on_rounded),
-          selectedIcon: Icon(
-            Icons.blur_on_rounded,
-            color: AuraColors.background,
+      }
+    }
+
+    final items = [
+      _DockItem(
+        key: const Key('dock-aura'),
+        label: 'Aura',
+        semanticLabel: 'your aura',
+        glyph: AuraDockGlyph.aura,
+        selected: selected == 0,
+        onTap: () => go(0),
+      ),
+      _DockItem(
+        key: const Key('dock-people'),
+        label: 'People',
+        semanticLabel: 'your people',
+        glyph: AuraDockGlyph.people,
+        selected: selected == 1,
+        onTap: () => go(1),
+      ),
+      _DockItem(
+        key: const Key('dock-send'),
+        label: 'Send',
+        semanticLabel: 'send aura',
+        glyph: AuraDockGlyph.send,
+        action: true,
+        onTap: onSend,
+      ),
+      _DockItem(
+        key: const Key('dock-discover'),
+        label: 'Discover',
+        semanticLabel: 'discover people',
+        glyph: AuraDockGlyph.discover,
+        onTap: onSend == null ? null : () => context.push(AuraRoutes.addFriend),
+      ),
+      _DockItem(
+        key: const Key('dock-settings'),
+        label: 'Settings',
+        semanticLabel: 'settings',
+        glyph: AuraDockGlyph.settings,
+        selected: selected == 2,
+        onTap: () => go(2),
+      ),
+    ];
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(36),
+              boxShadow: [
+                BoxShadow(
+                  color: AuraColors.textPrimary.withValues(alpha: 0.10),
+                  blurRadius: 24,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Material(
+              key: const Key('floating-dock'),
+              color: AuraColors.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(36),
+                side: const BorderSide(color: AuraColors.surfaceBorder),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                child: Row(
+                  children: [for (final item in items) Expanded(child: item)],
+                ),
+              ),
+            ),
           ),
-          label: 'your aura',
         ),
-        NavigationDestination(
-          icon: Icon(Icons.people_outline_rounded),
-          selectedIcon: Icon(
-            Icons.people_rounded,
-            color: AuraColors.background,
+      ),
+    );
+  }
+}
+
+class _DockItem extends StatelessWidget {
+  const _DockItem({
+    super.key,
+    required this.label,
+    required this.semanticLabel,
+    required this.glyph,
+    this.selected = false,
+    this.action = false,
+    this.onTap,
+  });
+  final String label;
+  final String semanticLabel;
+  final AuraDockGlyph glyph;
+  final bool selected;
+  final bool action;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    enabled: onTap != null,
+    label: semanticLabel,
+    onTap: onTap,
+    child: ExcludeSemantics(
+      child: Tooltip(
+        message: label,
+        excludeFromSemantics: true,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(26),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 56, minWidth: 48),
+            child: Center(
+              heightFactor: 1,
+              child: Ink(
+                key: action ? const Key('dock-send-circle') : null,
+                width: action ? 48 : 40,
+                height: action ? 48 : 40,
+                decoration: BoxDecoration(
+                  color: action && onTap != null
+                      ? AuraColors.action
+                      : selected
+                      ? AuraColors.lilac
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(action ? 24 : 14),
+                ),
+                child: Center(
+                  child: AuraDockIcon(
+                    glyph: glyph,
+                    color: action && onTap != null
+                        ? AuraColors.onAction
+                        : selected
+                        ? AuraColors.action
+                        : AuraColors.textMuted,
+                  ),
+                ),
+              ),
+            ),
           ),
-          label: 'your people',
         ),
-        NavigationDestination(
-          icon: Icon(Icons.tune_rounded),
-          selectedIcon: Icon(Icons.tune_rounded, color: AuraColors.background),
-          label: 'settings',
-        ),
-      ],
+      ),
     ),
   );
 }
@@ -141,7 +257,16 @@ class AuraIntro extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AuraEyebrow(label),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: AuraColors.lime,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: AuraEyebrow(label, color: AuraColors.textPrimary),
+          ),
+        ),
         const SizedBox(height: 10),
         Text(title, style: AuraType.headingLarge),
         const SizedBox(height: 8),

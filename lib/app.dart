@@ -30,11 +30,8 @@ class _AuraAppState extends State<AuraApp> {
       title: 'Aura',
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
-      theme: AuraTheme.dark,
-      // Dark only, deliberately — see AuraTheme. `darkTheme` is set to the same
-      // value so nothing can fall through to a default light theme.
-      darkTheme: AuraTheme.dark,
-      themeMode: ThemeMode.dark,
+      theme: AuraTheme.light,
+      themeMode: ThemeMode.light,
       builder: (context, child) {
         return ColoredBox(
           color: AuraColors.background,

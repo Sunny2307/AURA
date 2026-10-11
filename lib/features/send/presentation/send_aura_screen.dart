@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/aura_user.dart';
@@ -14,6 +16,8 @@ import '../../../shared/widgets/aura_identity.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../friends/application/friends_providers.dart';
 import '../data/aura_api.dart';
+import '../../../core/theme/aura_motion.dart';
+import '../../../prototype/prototype_runtime.dart';
 
 const _chips = [
   'showed up for me',
@@ -21,6 +25,14 @@ const _chips = [
   'made everyone laugh',
   'left me on read',
   'broke a promise',
+  'clutch save',
+  'main character energy',
+  'carried the group project',
+  'gave the best advice',
+  'certified real one',
+  'flaked last minute',
+  'ghosted the group chat',
+  'forgot my birthday',
 ];
 
 String _newKey() {
@@ -35,7 +47,8 @@ String _newKey() {
 }
 
 class SendAuraScreen extends ConsumerStatefulWidget {
-  const SendAuraScreen({super.key});
+  const SendAuraScreen({super.key, this.recipientUid});
+  final String? recipientUid;
 
   @override
   ConsumerState<SendAuraScreen> createState() => _SendAuraScreenState();
@@ -43,6 +56,7 @@ class SendAuraScreen extends ConsumerStatefulWidget {
 
 class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
   final _reason = TextEditingController();
+  final _search = TextEditingController();
   String? _recipientUid;
   String? _chip;
   String _visibility = 'friends';
@@ -52,8 +66,15 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
   late String _idempotencyKey = _newKey();
 
   @override
+  void initState() {
+    super.initState();
+    _recipientUid = widget.recipientUid;
+  }
+
+  @override
   void dispose() {
     _reason.dispose();
+    _search.dispose();
     super.dispose();
   }
 
@@ -63,6 +84,19 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
     final me = ref.watch(currentUserProvider).value;
     final myUid = ref.watch(authStateProvider).value?.uid;
     final caps = me?.pointCaps;
+    final choices = friends.value?.toList() ?? <Friendship>[];
+    final local = ref.watch(prototypeEnabledProvider);
+    if (local && myUid != null) {
+      final store = ref.watch(prototypeStoreProvider);
+      final recent = store.feed.expand((m) => [m.sender, m.recipient]).toList();
+      choices.sort((a, b) {
+        final aIndex = recent.indexOf(a.otherMember(myUid));
+        final bIndex = recent.indexOf(b.otherMember(myUid));
+        return (aIndex < 0 ? recent.length : aIndex).compareTo(
+          bIndex < 0 ? recent.length : bIndex,
+        );
+      });
+    }
     return Scaffold(
       appBar: AppBar(
         leading: const AuraBackButton(),
@@ -134,10 +168,22 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
                       ),
                     ],
                   ),
-                for (final friendship in accepted)
+                if (accepted.isNotEmpty) ...[
+                  TextField(
+                    controller: _search,
+                    decoration: const InputDecoration(
+                      labelText: 'search your friends',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                for (final friendship in choices)
                   _FriendChoice(
                     uid: friendship.otherMember(myUid),
                     selected: _recipientUid == friendship.otherMember(myUid),
+                    search: _search.text,
                     onSelected: (uid) => setState(() {
                       _recipientUid = uid;
                       _idempotencyKey = _newKey();
@@ -155,7 +201,7 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
                         label: Text(chip),
                         labelStyle: AuraType.bodyStrong.copyWith(
                           color: _chip == chip
-                              ? AuraColors.background
+                              ? AuraColors.onAction
                               : AuraColors.textPrimary,
                         ),
                         selected: _chip == chip,
@@ -185,7 +231,7 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
                   padding: const EdgeInsets.all(24),
                   margin: const EdgeInsets.only(top: 12),
                   decoration: BoxDecoration(
-                    color: AuraColors.surface,
+                    color: _points > 0 ? AuraColors.lime : AuraColors.peach,
                     borderRadius: AuraRadius.cardLargeAll,
                     border: Border.all(color: AuraColors.surfaceBorder),
                   ),
@@ -251,6 +297,7 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
       _sending = true;
       _error = null;
     });
+    final sentPoints = _points;
     try {
       await ref
           .read(auraApiProvider)
@@ -262,6 +309,44 @@ class _SendAuraScreenState extends ConsumerState<SendAuraScreen> {
             idempotencyKey: _idempotencyKey,
             chipId: _chip,
           );
+      if (!mounted) return;
+      unawaited(HapticFeedback.lightImpact().catchError((Object _) {}));
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: sentPoints > 0 ? AuraColors.lime : AuraColors.peach,
+          title: Text(
+            sentPoints > 0 ? 'good energy delivered.' : 'moment delivered.',
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: .7, end: 1),
+                duration: AuraMotion.respecting(context, AuraMotion.burst),
+                curve: Curves.easeOutBack,
+                builder: (_, value, child) =>
+                    Transform.scale(scale: value, child: child),
+                child: Icon(
+                  sentPoints > 0
+                      ? Icons.auto_awesome_rounded
+                      : Icons.bolt_rounded,
+                  size: 72,
+                  color: AuraColors.action,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('${sentPoints > 0 ? '+' : ''}$sentPoints aura'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('continue'),
+            ),
+          ],
+        ),
+      );
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('aura sent.')));
@@ -285,14 +370,22 @@ class _FriendChoice extends ConsumerWidget {
     required this.uid,
     required this.selected,
     required this.onSelected,
+    this.search = '',
   });
   final String uid;
   final bool selected;
   final ValueChanged<String> onSelected;
+  final String search;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(publicProfileProvider(uid));
+    if (profile.value != null &&
+        !profile.value!.handle.toLowerCase().contains(
+          search.trim().toLowerCase(),
+        )) {
+      return const SizedBox.shrink();
+    }
     return switch (profile) {
       AsyncData(value: final PublicProfile friend) => RadioGroup<String>(
         groupValue: selected ? uid : null,
@@ -305,14 +398,10 @@ class _FriendChoice extends ConsumerWidget {
             shape: RoundedRectangleBorder(
               borderRadius: AuraRadius.inputAll,
               side: BorderSide(
-                color: selected
-                    ? AuraColors.positive
-                    : AuraColors.surfaceBorder,
+                color: selected ? AuraColors.action : AuraColors.surfaceBorder,
               ),
             ),
-            tileColor: selected
-                ? AuraColors.positive.withValues(alpha: 0.08)
-                : AuraColors.surface,
+            tileColor: selected ? AuraColors.lilac : AuraColors.surface,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 8,

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/aura_colors.dart';
 import '../../core/theme/aura_spacing.dart';
 
-/// A solid raised surface with a quiet gradient and deliberate border.
+/// A paper surface with an optional pastel fill and a soft offset shadow.
 ///
 /// Card styling lives here rather than in `ThemeData.cardTheme` on purpose, so
 /// the border and radius are explicit and can't be silently dropped by a
@@ -16,6 +16,7 @@ class AuraCard extends StatelessWidget {
     this.onTap,
     this.large = false,
     this.borderColor,
+    this.color = AuraColors.surface,
   });
 
   final Widget child;
@@ -28,6 +29,7 @@ class AuraCard extends StatelessWidget {
   /// Overrides the hairline border — used to tint a card by outcome, e.g. a
   /// faint teal edge on a positive feed item.
   final Color? borderColor;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -35,11 +37,14 @@ class AuraCard extends StatelessWidget {
 
     final surface = DecoratedBox(
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AuraColors.surfaceRaised, AuraColors.surface],
-        ),
+        color: color,
+        boxShadow: [
+          BoxShadow(
+            color: AuraColors.textPrimary.withValues(alpha: 0.05),
+            offset: const Offset(0, 5),
+            blurRadius: 0,
+          ),
+        ],
         borderRadius: radius,
         border: Border.all(color: borderColor ?? AuraColors.surfaceBorder),
       ),
@@ -49,9 +54,16 @@ class AuraCard extends StatelessWidget {
     if (onTap == null) return surface;
 
     return Material(
-      color: Colors.transparent,
-      borderRadius: radius,
-      child: InkWell(borderRadius: radius, onTap: onTap, child: surface),
+      color: color,
+      shape: RoundedRectangleBorder(
+        borderRadius: radius,
+        side: BorderSide(color: borderColor ?? AuraColors.surfaceBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(padding: padding, child: child),
+      ),
     );
   }
 }

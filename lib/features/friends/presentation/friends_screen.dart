@@ -17,6 +17,9 @@ import '../application/friends_providers.dart';
 import '../../safety/presentation/safety_menu.dart';
 import 'friend_action_button.dart';
 import 'friend_tile.dart';
+import '../../../prototype/prototype_runtime.dart';
+
+import 'package:share_plus/share_plus.dart';
 
 /// Your friends, and the requests waiting on you.
 ///
@@ -35,7 +38,12 @@ class FriendsScreen extends ConsumerWidget {
     final myUid = ref.watch(authStateProvider).value?.uid;
 
     return Scaffold(
-      bottomNavigationBar: const AuraNavigation(selected: 1),
+      bottomNavigationBar: AuraNavigation(
+        selected: 1,
+        onSend: me == null
+            ? null
+            : () => AppRouter.pushTo(context, AuraRoutes.sendAura),
+      ),
       appBar: AppBar(
         title: Text('friends', style: AuraType.headingMedium),
         actions: [
@@ -71,13 +79,23 @@ class FriendsScreen extends ConsumerWidget {
   }
 
   Future<void> _shareHandle(BuildContext context, AuraUser me) async {
-    // Copy-to-clipboard rather than the OS share sheet: `share_plus` is a
-    // dependency this slice does not otherwise need, and pasting into whichever
-    // group chat the friend group already lives in is the actual behaviour.
     final link = AuraRoutes.inviteLinkFor(me.username);
-    await Clipboard.setData(
-      ClipboardData(text: 'add me on aura: ${me.handle}\n$link'),
-    );
+    final box = context.findRenderObject() as RenderBox?;
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          text: 'add me on aura: ${me.handle}\n$link',
+          sharePositionOrigin: box == null
+              ? null
+              : box.localToGlobal(Offset.zero) & box.size,
+        ),
+      );
+      return;
+    } catch (_) {
+      await Clipboard.setData(
+        ClipboardData(text: 'add me on aura: ${me.handle}\n$link'),
+      );
+    }
     if (!context.mounted) return;
     ScaffoldMessenger.of(context)
         .showSnackBar(const SnackBar(content: Text('invite copied.')));
@@ -196,6 +214,12 @@ class _Row extends ConsumerWidget {
     return switch (profile) {
       AsyncData(value: final PublicProfile p) => FriendTile(
         profile: p,
+        onTap: () => AppRouter.pushTo(
+          context,
+          prototypeMode && ref.read(prototypeStoreProvider).canViewProfile(uid)
+              ? AuraRoutes.localProfileFor(uid)
+              : AuraRoutes.profileFor(p.username),
+        ),
         subtitle: subtitle,
         // Block and report sit beside the friendship action rather than inside
         // it: they are available at every stage of a relationship, including on

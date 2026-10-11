@@ -161,6 +161,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               const SizedBox(height: AuraSpacing.lg),
               if (widget.showPrototype) ...[
                 const PrototypePanel(compact: true),
+                TextButton(
+                  onPressed: () =>
+                      AppRouter.pushTo(context, AuraRoutes.localAccounts),
+                  child: const Text('return to a saved account'),
+                ),
                 const SizedBox(height: 12),
               ],
               // Primary action sits at the bottom, inside the thumb's natural
@@ -221,7 +226,7 @@ class _PageDots extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 4),
                 decoration: BoxDecoration(
                   color: index == current
-                      ? AuraColors.positive
+                      ? AuraColors.action
                       : AuraColors.neutral,
                   borderRadius: AuraRadius.pillAll,
                 ),
@@ -256,7 +261,11 @@ class _OnboardingPage extends StatelessWidget {
             height: 250 * MediaQuery.textScalerOf(context).scale(16) / 16,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: AuraColors.surface,
+              color: visual is OnboardingOrbArt
+                  ? AuraColors.lilac
+                  : visual is OnboardingTransactionArt
+                  ? AuraColors.peach
+                  : AuraColors.lime,
               borderRadius: BorderRadius.circular(32),
               border: Border.all(color: AuraColors.surfaceBorder),
             ),
@@ -269,11 +278,22 @@ class _OnboardingPage extends StatelessWidget {
                 ),
                 Center(child: visual),
                 const Positioned(
+                  top: 54,
+                  right: 22,
+                  child: ExcludeSemantics(
+                    child: Icon(
+                      Icons.auto_awesome_rounded,
+                      color: AuraColors.action,
+                      size: 32,
+                    ),
+                  ),
+                ),
+                const Positioned(
                   bottom: 16,
                   right: 20,
                   child: Icon(
                     Icons.north_east_rounded,
-                    color: AuraColors.positive,
+                    color: AuraColors.action,
                   ),
                 ),
               ],

@@ -10,13 +10,13 @@ import '../../../shared/widgets/aura_identity.dart';
 import '../../auth/application/auth_providers.dart';
 import '../../auth/data/user_repository.dart';
 import '../../safety/application/safety_providers.dart';
+import '../../../prototype/prototype_runtime.dart';
+import 'local_notification_settings.dart';
 
 /// Privacy and safety settings — spec §5.11.
 ///
-/// Deliberately has **no notification toggles**. Push is Slice 7 and is blocked
-/// on the Blaze plan, so the switches would be real controls writing fields
-/// nothing reads. A dead switch teaches people that the settings screen lies,
-/// which costs more than the missing row.
+/// Local activity preferences are functional in the prototype. Remote push
+/// settings remain deferred until live integration.
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
@@ -32,7 +32,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final user = ref.watch(currentUserProvider);
 
     return Scaffold(
-      bottomNavigationBar: const AuraNavigation(selected: 2),
+      bottomNavigationBar: AuraNavigation(
+        selected: 2,
+        onSend: user.value == null
+            ? null
+            : () => AppRouter.pushTo(context, AuraRoutes.sendAura),
+      ),
       appBar: AppBar(title: Text('settings', style: AuraType.headingMedium)),
       body: SafeArea(
         child: switch (user) {
@@ -164,6 +169,22 @@ class _Body extends ConsumerWidget {
 
         const SizedBox(height: AuraSpacing.xl),
         const _Heading('account'),
+        if (prototypeMode) ...[
+          ListTile(
+            leading: const Icon(Icons.person_outline),
+            title: const Text('your profile'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => AppRouter.pushTo(
+              context,
+              AuraRoutes.localProfileFor(account.uid),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.switch_account_outlined),
+            title: const Text('switch local account'),
+            onTap: () => AppRouter.pushTo(context, AuraRoutes.localAccounts),
+          ),
+        ],
         ListTile(
           leading: const Icon(Icons.face_retouching_natural_outlined),
           title: Text('profile photo', style: AuraType.body),
@@ -183,6 +204,26 @@ class _Body extends ConsumerWidget {
           subtitle: Text(
             'permanent. there is no undo.',
             style: AuraType.caption.copyWith(color: AuraColors.textMuted),
+          ),
+        ),
+        if (prototypeMode) ...[
+          const _Heading('activity preferences'),
+          const LocalNotificationSettings(),
+        ],
+        const _Heading('about'),
+        ListTile(
+          leading: const Icon(Icons.info_outline),
+          title: const Text('about Aura'),
+          subtitle: const Text(prototypeMode ? '0.1.0 · local demo' : '0.1.0'),
+          onTap: () => showAboutDialog(
+            context: context,
+            applicationName: 'Aura',
+            applicationVersion: '0.1.0',
+            children: [
+              const Text(
+                'Your reputation, remixed. This is a development demo. Published terms and a support contact will be added before beta launch.',
+              ),
+            ],
           ),
         ),
         const SizedBox(height: AuraSpacing.xxl),

@@ -67,7 +67,7 @@ void main() {
         friendshipRepositoryProvider.overrideWithValue(friendships),
         auraApiProvider.overrideWithValue(api),
       ],
-      child: MaterialApp(theme: AuraTheme.dark, home: const SendAuraScreen()),
+      child: MaterialApp(theme: AuraTheme.light, home: const SendAuraScreen()),
     ));
     await tester.pumpAndSettle();
     expect(tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'send aura')).onPressed, isNull);

@@ -13,6 +13,9 @@ import '../../../shared/widgets/aura_card.dart';
 import '../../../prototype/prototype_panel.dart';
 import '../../../prototype/prototype_runtime.dart';
 import '../../../shared/widgets/profile_photo.dart';
+import '../../../shared/widgets/animated_aura_score.dart';
+import '../../../shared/widgets/aura_wordmark.dart';
+import 'local_home_extras.dart';
 
 /// The signed-in account, read live from the selected repository.
 ///
@@ -27,8 +30,9 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('aura', style: AuraType.headingMedium),
+        title: const AuraWordmark(size: 24),
         actions: [
+          if (prototypeMode) const LocalHomeActions(),
           if (prototypeMode)
             Padding(
               padding: const EdgeInsets.only(right: 8),
@@ -41,24 +45,11 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (user.value != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
-              child: SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () =>
-                      AppRouter.pushTo(context, AuraRoutes.sendAura),
-                  icon: const Icon(Icons.auto_awesome_rounded),
-                  label: const Text('send aura'),
-                ),
-              ),
-            ),
-          const AuraNavigation(selected: 0),
-        ],
+      bottomNavigationBar: AuraNavigation(
+        selected: 0,
+        onSend: user.value == null
+            ? null
+            : () => AppRouter.pushTo(context, AuraRoutes.sendAura),
       ),
       body: SafeArea(
         child: switch (user) {
@@ -120,6 +111,7 @@ class _Account extends StatelessWidget {
         const SizedBox(height: 24),
         AuraCard(
           large: true,
+          color: AuraColors.lilac,
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
@@ -131,18 +123,36 @@ class _Account extends StatelessWidget {
                   else
                     const Icon(
                       Icons.fingerprint_rounded,
-                      color: AuraColors.positive,
+                      color: AuraColors.action,
                       size: 30,
                     ),
                 ],
               ),
-              AuraOrbit(score: account.score, size: 180),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text('${account.score}', style: AuraType.scoreHero),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const AuraEyebrow('aura points'),
+                        const SizedBox(height: 12),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: AnimatedAuraScore(score: account.score),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  AuraOrbit(score: account.score, size: 112),
+                ],
               ),
-              const SizedBox(height: 8),
-              Text(account.handle, style: AuraType.bodyStrong),
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(account.handle, style: AuraType.headingMedium),
+              ),
               const SizedBox(height: 24),
               const Divider(),
               const SizedBox(height: 16),
@@ -161,7 +171,6 @@ class _Account extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 20),
         const SizedBox(height: 24),
         Row(
           children: [
@@ -185,12 +194,13 @@ class _Account extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         AuraCard(
+          color: AuraColors.peach,
           onTap: () => AppRouter.pushTo(context, AuraRoutes.friends),
           child: Row(
             children: [
               const Icon(
                 Icons.people_alt_outlined,
-                color: AuraColors.positive,
+                color: AuraColors.action,
                 size: 30,
               ),
               const SizedBox(width: 16),
@@ -209,6 +219,7 @@ class _Account extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 20),
+        if (prototypeMode) const LocalHomeExtras(),
         if (prototypeMode) const PrototypePanel(),
         const SizedBox(height: 16),
       ],

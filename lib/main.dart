@@ -14,16 +14,15 @@ Future<void> main() async {
   final localStore = prototypeMode ? await loadPrototype() : null;
   if (!prototypeMode) await _initializeFirebase();
 
-  // Edge-to-edge with transparent system bars, so the near-black background
-  // runs the full height of the screen.
+  // Light edge-to-edge canvas with readable dark system icons.
   await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
       systemNavigationBarColor: AuraColors.background,
-      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
 

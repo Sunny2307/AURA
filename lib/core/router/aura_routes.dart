@@ -31,6 +31,16 @@ abstract final class AuraRoutes {
   static const splash = '/splash';
   static const home = '/home';
   static const sendAura = '/send';
+  static const feed = '/feed';
+  static const leaderboard = '/leaderboard';
+  static const localProfile = '/profile/:uid';
+  static String localProfileFor(String uid) =>
+      '/profile/${Uri.encodeComponent(uid)}';
+  static const moment = '/moment/:id';
+  static String momentFor(String id) => '/moment/${Uri.encodeComponent(id)}';
+  static const exportCard = '/share-card';
+  static const activity = '/activity';
+  static const localAccounts = '/local-accounts';
   static const photo = '/profile/photo';
   static const designCheck = '/_design';
 

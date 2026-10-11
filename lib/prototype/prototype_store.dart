@@ -7,6 +7,7 @@ import '../core/models/public_profile.dart';
 import '../core/rules/aura_rules.dart';
 import '../core/validation/username_rules.dart';
 import '../core/models/report_reason.dart';
+import 'local_moment.dart';
 
 class PrototypeFailure implements Exception {
   const PrototypeFailure(this.code, this.message);
@@ -38,12 +39,21 @@ class PrototypeStore {
     'blocks': <String, dynamic>{},
     'reports': <dynamic>[],
     'sends': <String, dynamic>{},
+    'details': <String, dynamic>{},
+    'activity': <String, dynamic>{},
+    'preferences': <String, dynamic>{},
   };
 
   static Map<String, dynamic> _decode(String value) {
     final data = jsonDecode(value) as Map<String, dynamic>;
     if (data['version'] != 1) {
       throw const FormatException('Unknown prototype version');
+    }
+    for (final key in ['details', 'activity', 'preferences']) {
+      data.putIfAbsent(key, () => <String, dynamic>{});
+      if (data[key] is! Map<String, dynamic>) {
+        throw FormatException('Invalid $key');
+      }
     }
     for (final key in [
       'emails',
@@ -113,6 +123,263 @@ class PrototypeStore {
           )
           .toList()
         ..sort((a, b) => (b['at'] as String).compareTo(a['at'] as String));
+
+  bool canViewProfile(String uid) {
+    final viewer = currentUid;
+    return viewer != null &&
+        user(uid) != null &&
+        (viewer == uid ||
+            (!_blockedPair(viewer, uid) &&
+                friendship(viewer, uid)?.status == FriendshipStatus.accepted));
+  }
+
+  bool _canView(LocalMoment m) {
+    final viewer = currentUid;
+    if (viewer == null ||
+        user(viewer) == null ||
+        user(m.sender) == null ||
+        user(m.recipient) == null ||
+        _blockedPair(viewer, m.sender) ||
+        _blockedPair(viewer, m.recipient)) {
+      return false;
+    }
+    if (viewer == m.sender || viewer == m.recipient) return true;
+    return m.visibility == 'friends' &&
+        friendship(viewer, m.sender)?.status == FriendshipStatus.accepted &&
+        friendship(viewer, m.recipient)?.status == FriendshipStatus.accepted;
+  }
+
+  List<LocalMoment> get feed =>
+      _map('sends').entries
+          .map(
+            (e) => LocalMoment.fromMap(e.key, e.value as Map<String, dynamic>),
+          )
+          .where(_canView)
+          .map(
+            (m) => LocalMoment(
+              id: m.id,
+              sender: m.sender,
+              recipient: m.recipient,
+              points: m.points,
+              reason: m.reason,
+              visibility: m.visibility,
+              at: m.at,
+              reactions: Map.fromEntries(
+                m.reactions.entries.where(
+                  (e) =>
+                      user(e.key) != null && !_blockedPair(currentUid!, e.key),
+                ),
+              ),
+            ),
+          )
+          .toList()
+        ..sort((a, b) {
+          final order = b.at.compareTo(a.at);
+          return order == 0 ? a.id.compareTo(b.id) : order;
+        });
+  LocalMoment? moment(String id) => feed.where((m) => m.id == id).firstOrNull;
+  List<LocalMoment> momentsFor(String uid) => !canViewProfile(uid)
+      ? []
+      : feed.where((m) => m.recipient == uid || m.sender == uid).toList();
+  String bio(String uid) => canViewProfile(uid)
+      ? ((_map('details')[uid] as Map?)?['bio'] as String? ?? '')
+      : '';
+  Future<void> editBio(String uid, String value) => _mutate(() {
+    requireSelf(uid);
+    if (value.trim().runes.length > 160) {
+      throw const PrototypeFailure(
+        'invalid-bio',
+        'keep your bio under 160 characters.',
+      );
+    }
+    _map('details')[uid] = {'bio': value.trim()};
+  });
+
+  List<AuraUser> get leaderboard {
+    final viewer = currentUid;
+    if (viewer == null) return [];
+    final ids = {
+      viewer,
+      ...friends(
+        viewer,
+        FriendshipStatus.accepted,
+      ).map((f) => f.otherMember(viewer)),
+    };
+    return ids
+        .map(user)
+        .whereType<AuraUser>()
+        .where(
+          (u) =>
+              u.privacy.appearOnLeaderboards &&
+              !u.isMinor &&
+              !_blockedPair(viewer, u.uid),
+        )
+        .toList()
+      ..sort((a, b) {
+        final order = b.score.compareTo(a.score);
+        return order == 0 ? a.username.compareTo(b.username) : order;
+      });
+  }
+
+  int? get rank {
+    final index = leaderboard.indexWhere((u) => u.uid == currentUid);
+    return index < 0 ? null : index + 1;
+  }
+
+  // Aggregate values are profile data. Only accepted, unblocked friends may read.
+  int changeSince(String uid, DateTime since) => !canViewProfile(uid)
+      ? 0
+      : _map('sends').values
+            .cast<Map<String, dynamic>>()
+            .where(
+              (m) =>
+                  m['recipient'] == uid &&
+                  !DateTime.parse(m['at'] as String).isBefore(since),
+            )
+            .fold(0, (sum, m) => sum + (m['points'] as int));
+  List<int> scoreHistory(String uid, {DateTime? now}) {
+    if (!canViewProfile(uid)) return [];
+    final today = now ?? DateTime.now();
+    return List.generate(30, (i) {
+      final end = DateTime(
+        today.year,
+        today.month,
+        today.day,
+      ).subtract(Duration(days: 28 - i));
+      return user(uid)!.score - changeSince(uid, end);
+    });
+  }
+
+  bool preference(String kind) => currentUid == null
+      ? false
+      : ((_map('preferences')[currentUid] as Map?)?[kind] as bool? ?? true);
+  Future<void> setPreference(String kind, bool enabled) => _mutate(() {
+    final uid = currentUid;
+    if (uid == null || !['transactions', 'reactions'].contains(kind)) {
+      throw const PrototypeFailure('permissionDenied', 'sign in again.');
+    }
+    final prefs = Map<String, dynamic>.from(
+      _map('preferences')[uid] as Map? ?? {},
+    );
+    prefs[kind] = enabled;
+    _map('preferences')[uid] = prefs;
+  });
+  void _notify(String uid, String momentId, String actor, String kind) {
+    if ((_map('preferences')[uid] as Map?)?[kind] == false) return;
+    final id = '$uid-$momentId-$kind-$actor';
+    _map('activity')[id] = {
+      'uid': uid,
+      'moment': momentId,
+      'actor': actor,
+      'kind': kind,
+      'at': DateTime.now().toIso8601String(),
+      'read': false,
+    };
+  }
+
+  List<LocalActivity> get activity =>
+      _map('activity').entries
+          .where(
+            (e) =>
+                (e.value as Map)['uid'] == currentUid &&
+                user((e.value as Map)['actor'] as String) != null &&
+                !_blockedPair(
+                  currentUid!,
+                  (e.value as Map)['actor'] as String,
+                ) &&
+                moment((e.value as Map)['moment'] as String) != null,
+          )
+          .map((e) {
+            final m = e.value as Map;
+            return LocalActivity(
+              id: e.key,
+              momentId: m['moment'] as String,
+              actor: m['actor'] as String,
+              kind: m['kind'] as String,
+              at: DateTime.parse(m['at'] as String),
+              read: m['read'] as bool,
+            );
+          })
+          .toList()
+        ..sort((a, b) => b.at.compareTo(a.at));
+  Future<void> markRead(String id) => _mutate(() {
+    final event = _map('activity')[id] as Map?;
+    if (currentUid == null || event?['uid'] != currentUid) {
+      throw const PrototypeFailure('permissionDenied', 'activity unavailable.');
+    }
+    event!['read'] = true;
+  });
+  Future<void> react(String id, String emoji) => _mutate(() {
+    final m = moment(id);
+    if (m == null || !['💀', '🔥', '😭', '👑', '☠️'].contains(emoji)) {
+      throw const PrototypeFailure('permissionDenied', 'moment unavailable.');
+    }
+    final reactions = Map<String, String>.from(
+      (_map('sends')[id] as Map)['reactions'] as Map? ?? {},
+    );
+    if (reactions[currentUid] == emoji) {
+      reactions.remove(currentUid);
+    } else {
+      reactions[currentUid!] = emoji;
+      for (final uid in {m.sender, m.recipient}..remove(currentUid)) {
+        _notify(uid, id, currentUid!, 'reactions');
+      }
+    }
+    (_map('sends')[id] as Map)['reactions'] = reactions;
+  });
+  Future<void> reportMoment(String id, String reason) => _mutate(() {
+    final m = moment(id);
+    if (m == null || !ReportReason.values.any((r) => r.wireValue == reason)) {
+      throw const PrototypeFailure('permissionDenied', 'moment unavailable.');
+    }
+    final other = m.sender == currentUid ? m.recipient : m.sender;
+    _block(currentUid!, other);
+    (_data['reports'] as List).add({
+      'viewer': currentUid,
+      'reported': other,
+      'reason': reason,
+      'moment': id,
+    });
+  });
+
+  Future<void> seedMoments() => _mutate(() {
+    final uid = currentUid;
+    if (uid == null || user(uid) == null) return;
+    for (var i = 0; i < 8; i++) {
+      final friend = i.isEven ? 'sample-sam' : 'sample-maya';
+      final id = 'sample-moment-$uid-$i';
+      if (_map('sends').containsKey(id) ||
+          friendship(uid, friend)?.status != FriendshipStatus.accepted ||
+          _blockedPair(uid, friend) ||
+          user(uid)!.privacy.whoCanSendAura == WhoCanSendAura.nobody) {
+        continue;
+      }
+      final points = [120, 80, -40, 200, -60, 100, 50, 160][i];
+      _map('sends')[id] = {
+        'sender': friend,
+        'recipient': uid,
+        'points': points,
+        'reason': [
+          'had my back',
+          'clutch save',
+          'left me on read',
+          'certified real one',
+          'flaked last minute',
+          'made everyone laugh',
+          'showed up for me',
+          'main character energy',
+        ][i],
+        'visibility': 'friends',
+        'chip': null,
+        'at': DateTime.now()
+            .subtract(Duration(hours: i * 19))
+            .toIso8601String(),
+      };
+      final account = user(uid)!;
+      _put(account.copyWith(score: account.score + points));
+      _notify(uid, id, friend, 'transactions');
+    }
+  });
 
   Stream<T> watch<T>(T Function() read) => Stream<T>.multi((out) {
     final subscription = _changes.stream.listen(
@@ -507,6 +774,7 @@ class PrototypeStore {
       ...payload,
       'at': DateTime.now().toIso8601String(),
     };
+    _notify(recipient, recordKey, sender, 'transactions');
   });
 
   Future<void> deleteAccount(String uid) => _mutate(() {
@@ -523,6 +791,20 @@ class PrototypeStore {
       return map['viewer'] == uid || map['reported'] == uid;
     });
     _map('blocks').remove(uid);
+    for (final value in _map('blocks').values) {
+      (value as List).remove(uid);
+    }
+    for (final value in _map('sends').values) {
+      ((value as Map)['reactions'] as Map?)?.remove(uid);
+    }
+    _map('details').remove(uid);
+    _map('preferences').remove(uid);
+    _map('activity').removeWhere(
+      (_, v) =>
+          (v as Map)['uid'] == uid ||
+          v['actor'] == uid ||
+          !_map('sends').containsKey(v['moment']),
+    );
     _map('users').remove(uid);
     _map('emails').removeWhere((_, v) => v == uid);
     _data['session'] = null;
@@ -534,6 +816,9 @@ class PrototypeStore {
       final map = v as Map<String, dynamic>;
       return map['sender'] == uid || map['recipient'] == uid;
     });
+    _map(
+      'activity',
+    ).removeWhere((_, v) => !_map('sends').containsKey((v as Map)['moment']));
   });
 
   Future<void> dispose() async {

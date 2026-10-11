@@ -25,7 +25,7 @@ void main() {
     testWidgets('renders sign, unit and colour together', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          theme: AuraTheme.dark,
+          theme: AuraTheme.light,
           home: const Scaffold(body: AuraPoints(points: -80, showUnit: true)),
         ),
       );
@@ -128,6 +128,9 @@ void main() {
         AuraColors.background,
         AuraColors.surface,
         AuraColors.surfaceRaised,
+        AuraColors.lilac,
+        AuraColors.peach,
+        AuraColors.lime,
       ]) {
         for (final fg in [
           AuraColors.textPrimary,
@@ -135,26 +138,28 @@ void main() {
           AuraColors.positive,
           AuraColors.negative,
           AuraColors.gold,
+          AuraColors.action,
         ]) {
           expect(contrast(fg, bg), greaterThanOrEqualTo(4.5));
         }
         expect(contrast(AuraColors.controlBorder, bg), greaterThanOrEqualTo(3));
       }
       expect(
-        contrast(AuraTheme.dark.colorScheme.onPrimary, AuraColors.positive),
+        contrast(AuraTheme.light.colorScheme.onPrimary, AuraColors.action),
         greaterThanOrEqualTo(4.5),
       );
     });
-    test('is dark and uses the exact spec background', () {
-      final theme = AuraTheme.dark;
-      expect(theme.brightness, Brightness.dark);
+    test('uses a light canvas and separates actions from aura status', () {
+      final theme = AuraTheme.light;
+      expect(theme.brightness, Brightness.light);
       expect(theme.scaffoldBackgroundColor, AuraColors.background);
-      expect(theme.colorScheme.primary, AuraColors.positive);
+      expect(theme.colorScheme.primary, AuraColors.action);
+      expect(theme.colorScheme.primary, isNot(AuraColors.positive));
       expect(theme.colorScheme.error, AuraColors.negative);
     });
 
     test('uses the bundled font, not a platform default', () {
-      expect(AuraTheme.dark.textTheme.bodyLarge?.fontFamily, 'Nunito');
+      expect(AuraTheme.light.textTheme.bodyLarge?.fontFamily, 'Nunito');
     });
 
     // Nunito's wght axis defaults to 200 (verified by tool/check_font.js), so a
